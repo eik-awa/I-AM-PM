@@ -138,7 +138,7 @@ export interface GameState {
   pmPoints: number
   unlockedSkills: string[]
   clearedModes: GameMode[]
-  completedMissionIds: string[]
+  completedMissionsByMode: Record<string, string[]>
   unlockedCharacterIds: string[]
 }
 

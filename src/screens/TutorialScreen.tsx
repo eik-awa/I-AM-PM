@@ -240,7 +240,7 @@ export function TutorialScreen() {
   const [apiProgress, setApiProgress] = useState(0)
   const [screenProgress, setScreenProgress] = useState(0)
   const [hasFire, setHasFire] = useState(false)
-  const [reviewUsed, setReviewUsed] = useState(false)
+  const [fireChoice, setFireChoice] = useState<'A' | 'B' | null>(null)
   const [unlockIdx, setUnlockIdx] = useState(0)
 
   const next = useCallback(() => setStep(s => (s + 1) as Step), [])
@@ -705,14 +705,6 @@ export function TutorialScreen() {
                         : undefined
                     }
                   />
-                  {/* コードレビューカード（グレー） */}
-                  <motion.div
-                    className="rounded-xl border border-white/5 bg-pm-surface/30 p-3 w-28 flex-shrink-0 opacity-40"
-                  >
-                    <p className="text-pm-muted text-xs mb-0.5">イベント</p>
-                    <p className="text-pm-text text-sm font-bold leading-tight">コードレビュー</p>
-                    <p className="text-pm-muted text-xs mt-1">品質改善</p>
-                  </motion.div>
                 </div>
               </div>
             </div>
@@ -920,12 +912,22 @@ export function TutorialScreen() {
                   <div>
                     <PlayerBubble key="fr-p1" text="…え" />
                     <BossBubble key="fr-b1" text="よくあることだ" />
-                    <BossBubble key="fr-b2" text="大事なのはここからの動きだ" />
+                    <BossBubble key="fr-b2" text="どう対処するか、選べ" />
                   </div>
                 )}
-                {(step === STEP.FIRE_REVIEW || step === STEP.FIRE_RESOLVED) && (
+                {step === STEP.FIRE_REVIEW && (
                   <div>
-                    <BossBubble key="frv-b1" text="このカードで炎上を解除できます" />
+                    <BossBubble key="frv-b1" text="PMとして判断を下せ" />
+                  </div>
+                )}
+                {step === STEP.FIRE_RESOLVED && (
+                  <div>
+                    {fireChoice === 'A' && (
+                      <BossBubble key="frv-A" text="残業で乗り切ったか。ただ、品質には注意しろ" />
+                    )}
+                    {fireChoice === 'B' && (
+                      <BossBubble key="frv-B" text="スコープ削減は正しい判断だ。PMの仕事は優先順位をつけることだ" />
+                    )}
                   </div>
                 )}
                 {step === STEP.FIRE_BOSS && (
@@ -940,14 +942,14 @@ export function TutorialScreen() {
             {/* タスク状態 */}
             <div className="flex-1 px-4 py-3 flex flex-col gap-2">
               {/* API開発 — 炎上中 */}
-              <div className={`p-4 rounded-xl border transition-all ${hasFire && !reviewUsed ? 'border-pm-red/60 bg-pm-red/5' : 'border-white/5 bg-pm-surface'}`}>
+              <div className={`p-4 rounded-xl border transition-all ${hasFire ? 'border-pm-red/60 bg-pm-red/5' : 'border-white/5 bg-pm-surface'}`}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <p className="text-pm-text text-sm font-bold">API開発</p>
-                    {hasFire && !reviewUsed && (
+                    {hasFire && (
                       <span className="text-xs text-pm-red fire-pulse">🔥 炎上中</span>
                     )}
-                    {reviewUsed && (
+                    {fireChoice !== null && (
                       <motion.span
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -961,7 +963,7 @@ export function TutorialScreen() {
                 </div>
                 <div className="h-3 bg-black/40 rounded-full overflow-hidden">
                   <motion.div
-                    className={`h-full rounded-full ${hasFire && !reviewUsed ? 'bg-pm-red/70' : 'bg-pm-cyan'}`}
+                    className={`h-full rounded-full ${hasFire ? 'bg-pm-red/70' : 'bg-pm-cyan'}`}
                     animate={{ width: `${apiProgress}%` }}
                     transition={{ duration: 0.8, ease: 'easeOut' }}
                   />
@@ -988,55 +990,55 @@ export function TutorialScreen() {
                 </div>
               </div>
 
-              {/* コードレビューカード（ハイライト） */}
-              {(step === STEP.FIRE_REVIEW || step === STEP.FIRE_RESOLVED) && (
+              {/* 選択肢 */}
+              {step === STEP.FIRE_REVIEW && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-2"
+                  className="mt-2 flex flex-col gap-3"
                 >
-                  <p className="text-pm-muted text-xs mb-2 tracking-wider">── 手札 ──</p>
+                  <p className="text-pm-muted text-xs tracking-wider">── 対処方法を選ぶ ──</p>
                   <motion.button
-                    animate={
-                      !reviewUsed
-                        ? { boxShadow: ['0 0 0px rgba(6,214,160,0)', '0 0 20px rgba(6,214,160,0.5)', '0 0 0px rgba(6,214,160,0)'] }
-                        : {}
-                    }
+                    animate={{ boxShadow: ['0 0 0px rgba(0,180,216,0)', '0 0 16px rgba(0,180,216,0.4)', '0 0 0px rgba(0,180,216,0)'] }}
                     transition={{ duration: 1.2, repeat: Infinity }}
-                    onClick={
-                      !reviewUsed
-                        ? () => {
-                            setReviewUsed(true)
-                            setHasFire(false)
-                            setTimeout(() => next(), 800)
-                          }
-                        : undefined
-                    }
-                    disabled={reviewUsed}
-                    className={[
-                      'w-full p-3 rounded-xl border text-left transition-all',
-                      reviewUsed
-                        ? 'border-white/5 bg-pm-surface/50 opacity-50'
-                        : 'border-pm-green/50 bg-pm-green/5 active:scale-95',
-                    ].join(' ')}
+                    onClick={() => {
+                      setFireChoice('A')
+                      setHasFire(false)
+                      setTimeout(() => setStep(STEP.FIRE_RESOLVED), 400)
+                    }}
+                    className="w-full p-4 rounded-xl border border-pm-cyan/40 bg-pm-cyan/5 text-left active:scale-95 transition-transform"
                   >
-                    <p className="text-pm-green text-xs font-bold mb-0.5">
-                      {reviewUsed ? '使用済み' : '🔍 コードレビュー'}
-                    </p>
-                    <p className="text-pm-text text-sm font-bold">コードレビュー強化</p>
-                    <p className="text-pm-muted text-xs mt-1">炎上状態を解除する</p>
+                    <p className="text-pm-cyan text-xs font-bold mb-1">A：残業で対応する</p>
+                    <p className="text-pm-muted text-xs">チームに残業を依頼し、仕様変更を吸収する</p>
+                    <p className="text-pm-red text-xs mt-1">リスク：品質低下の可能性</p>
+                  </motion.button>
+                  <motion.button
+                    animate={{ boxShadow: ['0 0 0px rgba(6,214,160,0)', '0 0 16px rgba(6,214,160,0.4)', '0 0 0px rgba(6,214,160,0)'] }}
+                    transition={{ duration: 1.2, repeat: Infinity, delay: 0.3 }}
+                    onClick={() => {
+                      setFireChoice('B')
+                      setHasFire(false)
+                      setTimeout(() => setStep(STEP.FIRE_RESOLVED), 400)
+                    }}
+                    className="w-full p-4 rounded-xl border border-pm-green/40 bg-pm-green/5 text-left active:scale-95 transition-transform"
+                  >
+                    <p className="text-pm-green text-xs font-bold mb-1">B：スコープを調整する</p>
+                    <p className="text-pm-muted text-xs">一部機能を削減し、期日と品質を守る</p>
+                    <p className="text-pm-yellow text-xs mt-1">リスク：機能の一部を削減</p>
                   </motion.button>
                 </motion.div>
               )}
 
-              {/* 解除完了 */}
-              {step === STEP.FIRE_RESOLVED && reviewUsed && (
+              {/* 対処完了 */}
+              {step === STEP.FIRE_RESOLVED && fireChoice !== null && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   className="px-3 py-2 bg-pm-green/10 border border-pm-green/30 rounded-lg"
                 >
-                  <p className="text-pm-green text-sm text-center font-bold">✓ 炎上解除</p>
+                  <p className="text-pm-green text-sm text-center font-bold">
+                    {fireChoice === 'A' ? '✓ 残業対応で炎上解除' : '✓ スコープ調整で炎上解除'}
+                  </p>
                 </motion.div>
               )}
             </div>
@@ -1044,9 +1046,9 @@ export function TutorialScreen() {
             {/* ボタン */}
             <div className="flex-shrink-0 p-4">
               {step === STEP.FIRE_RESET && (
-                <TapNext label="コードレビューカードを確認する" onClick={next} />
+                <TapNext label="対処方法を選ぶ" onClick={next} />
               )}
-              {step === STEP.FIRE_RESOLVED && reviewUsed && (
+              {step === STEP.FIRE_RESOLVED && fireChoice !== null && (
                 <TapNext label="次へ" onClick={next} />
               )}
               {step === STEP.FIRE_BOSS && (

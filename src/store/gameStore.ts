@@ -238,7 +238,7 @@ const initialState: GameState = {
   pmPoints: 0,
   unlockedSkills: [],
   clearedModes: [],
-  completedMissionIds: [],
+  completedMissionsByMode: {},
   unlockedCharacterIds: ['p_tanaka', 'p_sato', 'p_yamada'],
 }
 
@@ -588,10 +588,14 @@ export const useGameStore = create<GameStore>()(
               ...state.unlockedCharacterIds,
               ...(modeConfig?.unlocksCharacters ?? []),
             ])]
-            const newCompletedMissionIds = [...new Set([
-              ...state.completedMissionIds,
-              ...completedMissions.filter(m => m.status === 'completed').map(m => m.id),
-            ])]
+            const existingForMode = state.completedMissionsByMode[state.mode] ?? []
+            const newCompletedMissionsByMode = {
+              ...state.completedMissionsByMode,
+              [state.mode]: [...new Set([
+                ...existingForMode,
+                ...completedMissions.filter(m => m.status === 'completed').map(m => m.id),
+              ])],
+            }
 
             set({
               status: 'won',
@@ -608,7 +612,7 @@ export const useGameStore = create<GameStore>()(
               missionStats: newMissionStats,
               pmPoints: state.pmPoints + earnedPoints,
               clearedModes: newClearedModes,
-              completedMissionIds: newCompletedMissionIds,
+              completedMissionsByMode: newCompletedMissionsByMode,
               unlockedCharacterIds: newUnlockedCharIds,
             })
           } else {
@@ -844,7 +848,7 @@ export const useGameStore = create<GameStore>()(
           pmPoints: state.pmPoints,
           unlockedSkills: state.unlockedSkills,
           clearedModes: state.clearedModes,
-          completedMissionIds: state.completedMissionIds,
+          completedMissionsByMode: state.completedMissionsByMode,
           unlockedCharacterIds: state.unlockedCharacterIds,
         })
       },
@@ -862,7 +866,7 @@ export const useGameStore = create<GameStore>()(
         pmPoints: state.pmPoints,
         unlockedSkills: state.unlockedSkills,
         clearedModes: state.clearedModes,
-        completedMissionIds: state.completedMissionIds,
+        completedMissionsByMode: state.completedMissionsByMode,
         unlockedCharacterIds: state.unlockedCharacterIds,
         status: ['playing', 'won', 'lost'].includes(state.status) ? 'title' : state.status,
       }),

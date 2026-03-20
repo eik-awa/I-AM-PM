@@ -86,13 +86,14 @@ function ModeCardContent({
   mode,
   isUnlocked,
   isCleared,
-  completedMissionIds,
+  completedMissionsByMode,
 }: {
   mode: GameModeConfig
   isUnlocked: boolean
   isCleared: boolean
-  completedMissionIds: string[]
+  completedMissionsByMode: Record<string, string[]>
 }) {
+  const completedMissionIds = completedMissionsByMode[mode.id] ?? []
   const stars = DIFFICULTY_STARS[mode.id] ?? 1
   const icon = MODE_ICON[mode.id]
   const bg = MODE_BG[mode.id]
@@ -192,12 +193,12 @@ function ModeCardContent({
 function ModeFlipCarousel({
   unlockedSkills,
   clearedModes,
-  completedMissionIds,
+  completedMissionsByMode,
   onStart,
 }: {
   unlockedSkills: string[]
   clearedModes: string[]
-  completedMissionIds: string[]
+  completedMissionsByMode: Record<string, string[]>
   onStart: (mode: GameMode) => void
 }) {
   const [index, setIndex] = useState(0)
@@ -248,7 +249,7 @@ function ModeFlipCarousel({
                 mode={currentMode}
                 isUnlocked={isUnlocked}
                 isCleared={isCleared}
-                completedMissionIds={completedMissionIds}
+                completedMissionsByMode={completedMissionsByMode}
               />
             </motion.div>
           </AnimatePresence>
@@ -268,7 +269,7 @@ function ModeFlipCarousel({
         <div className="flex gap-1.5 items-center">
           {PLAYABLE_MODES.map((m, i) => {
             const mCleared = clearedModes.includes(m.id)
-            const mAllDone = m.missionIds.length > 0 && m.missionIds.every(id => completedMissionIds.includes(id))
+            const mAllDone = m.missionIds.length > 0 && m.missionIds.every(id => (completedMissionsByMode[m.id] ?? []).includes(id))
             return (
               <button
                 key={m.id}
@@ -320,7 +321,7 @@ function ModeFlipCarousel({
 }
 
 export function TitleScreen({ onOpenSkillTree }: { onOpenSkillTree: () => void }) {
-  const { startGameMode, startTutorial, bestScore, totalRuns, pmPoints, unlockedSkills, clearedModes, completedMissionIds } = useGameStore()
+  const { startGameMode, startTutorial, bestScore, totalRuns, pmPoints, unlockedSkills, clearedModes, completedMissionsByMode } = useGameStore()
 
   return (
     <div className="h-full flex flex-col bg-pm-bg overflow-y-auto">
@@ -397,7 +398,7 @@ export function TitleScreen({ onOpenSkillTree }: { onOpenSkillTree: () => void }
         <ModeFlipCarousel
           unlockedSkills={unlockedSkills}
           clearedModes={clearedModes}
-          completedMissionIds={completedMissionIds}
+          completedMissionsByMode={completedMissionsByMode}
           onStart={startGameMode}
         />
       </motion.div>
