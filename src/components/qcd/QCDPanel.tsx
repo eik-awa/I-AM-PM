@@ -1,9 +1,17 @@
 import { motion } from 'framer-motion'
 import { useGameStore } from '../../store/gameStore'
+import { SCENARIOS } from '../../constants/scenarios'
 import { cn } from '../../utils/cn'
 
 export function QCDPanel() {
-  const { qcd, scenario, phases, activePersonnel, turn } = useGameStore()
+  const { projects, activeProjectId, activePersonnel, turn } = useGameStore()
+
+  const activeProject = projects.find(p => p.id === activeProjectId)
+  const qcd = activeProject?.qcd ?? { quality: 0, cost: 0, budget: 0, delivery: 0 }
+  const phases = activeProject?.phases ?? []
+
+  const scenario = SCENARIOS.find(s => s.id === activeProject?.scenarioId)
+  const qualityMin = scenario?.qualityMin ?? 50
 
   const allTasks = phases.flatMap(ph => ph.tasks)
   const totalBugs = allTasks.reduce((sum, t) => sum + t.bugs, 0)
@@ -13,24 +21,46 @@ export function QCDPanel() {
 
   return (
     <div className="h-full overflow-y-auto px-3 py-3 space-y-3">
+      {/* プロジェクト一覧サマリー（複数案件時） */}
+      {projects.length > 1 && (
+        <div className="bg-pm-surface/60 rounded-xl border border-white/8 p-4">
+          <p className="text-pm-muted text-xs mb-3 tracking-wider">── 全プロジェクト状況 ──</p>
+          <div className="space-y-2">
+            {projects.map(proj => {
+              const statusLabel = proj.status === 'won' ? '✅ 完了' : proj.status === 'lost' ? '❌ 失敗' : '🔨 進行中'
+              const pct = Math.round(proj.qcd.delivery)
+              return (
+                <div key={proj.id} className="flex items-center gap-2">
+                  <span className="text-xs text-pm-text truncate flex-1">{proj.name}</span>
+                  <span className="text-[10px] text-pm-muted">{statusLabel}</span>
+                  <span className="text-[10px] text-pm-cyan font-mono w-8 text-right">{pct}%</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* QCDゲージ */}
       <div className="bg-pm-surface/60 rounded-xl border border-white/8 p-4">
-        <p className="text-pm-muted text-xs mb-3 tracking-wider">── QCD ステータス ──</p>
+        <p className="text-pm-muted text-xs mb-3 tracking-wider">
+          ── QCD ステータス {activeProject ? `（${activeProject.name}）` : ''} ──
+        </p>
         <div className="space-y-4">
           <GaugeItem
             label="Quality（品質）"
             value={qcd.quality}
-            min={scenario?.qualityMin ?? 50}
+            min={qualityMin}
             max={100}
             color={qcd.quality >= 70 ? 'bg-pm-green' : qcd.quality >= 40 ? 'bg-pm-yellow' : 'bg-pm-red'}
-            sublabel={`基準値：${scenario?.qualityMin ?? 50} 以上`}
+            sublabel={`基準値：${qualityMin} 以上`}
           />
           <GaugeItem
             label="Cost（コスト）"
-            value={Math.min(100, (qcd.cost / qcd.budget) * 100)}
+            value={Math.min(100, qcd.budget > 0 ? (qcd.cost / qcd.budget) * 100 : 0)}
             min={0}
             max={100}
-            color={qcd.cost / qcd.budget < 0.7 ? 'bg-pm-green' : qcd.cost / qcd.budget < 0.9 ? 'bg-pm-yellow' : 'bg-pm-red'}
+            color={qcd.budget > 0 && qcd.cost / qcd.budget < 0.7 ? 'bg-pm-green' : qcd.budget > 0 && qcd.cost / qcd.budget < 0.9 ? 'bg-pm-yellow' : 'bg-pm-red'}
             sublabel={`${qcd.cost}万 / ${qcd.budget}万円`}
             invert
           />
@@ -82,7 +112,7 @@ export function QCDPanel() {
                   <div
                     className={cn(
                       'h-full rounded-full',
-                      p.condition >= 70 ? 'bg-pm-green' : p.condition >= 40 ? 'bg-pm-yellow' : 'bg-pm-red'
+                      p.condition >= 70 ? 'bg-pm-green' : p.condition >= 40 ? 'bg-pm-yellow' : 'bg-pm-red',
                     )}
                     style={{ width: `${p.condition}%` }}
                   />
@@ -122,7 +152,6 @@ function GaugeItem({
           transition={{ duration: 0.6, type: 'spring' }}
           className={cn('h-full rounded-full', color)}
         />
-        {/* 基準線（品質のみ） */}
         {!invert && min > 0 && (
           <div
             className="absolute top-0 bottom-0 w-0.5 bg-pm-red/70"

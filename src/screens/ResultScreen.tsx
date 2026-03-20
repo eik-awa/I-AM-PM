@@ -11,11 +11,25 @@ const RANK_THRESHOLDS = [
 ]
 
 export function ResultScreen() {
-  const { status, qcd, turn, scenario, goToTitle, log, missions, pmPoints } = useGameStore()
+  const { status, projects, turn, goToTitle, log, missions, pmPoints, skillPoints } = useGameStore()
   const won = status === 'won'
 
-  const score = scenario
-    ? calculateFinalScore(qcd.quality, qcd.cost, qcd.budget, turn.current, turn.max)
+  // 全プロジェクトの平均QCDでスコア計算
+  const avgQuality = projects.length > 0
+    ? projects.reduce((s, p) => s + p.qcd.quality, 0) / projects.length
+    : 0
+  const avgCost = projects.length > 0
+    ? projects.reduce((s, p) => s + p.qcd.cost, 0) / projects.length
+    : 0
+  const avgBudget = projects.length > 0
+    ? projects.reduce((s, p) => s + p.qcd.budget, 0) / projects.length
+    : 1
+  const avgDelivery = projects.length > 0
+    ? projects.reduce((s, p) => s + p.qcd.delivery, 0) / projects.length
+    : 0
+
+  const score = projects.length > 0
+    ? calculateFinalScore(avgQuality, avgCost, avgBudget, turn.current, turn.max)
     : 0
 
   const rankEntry = RANK_THRESHOLDS.find(r => score >= r.min) ?? RANK_THRESHOLDS[RANK_THRESHOLDS.length - 1]
@@ -38,6 +52,11 @@ export function ResultScreen() {
           <p className="text-pm-muted text-sm">
             {won ? `${turn.current - 1}週間でデリバリー達成` : '次回に活かそう'}
           </p>
+          {skillPoints > 0 && (
+            <p className="text-pm-yellow text-sm mt-1 font-bold">
+              今回獲得スキルポイント: ⚡{skillPoints}SP
+            </p>
+          )}
         </motion.div>
       </div>
 
@@ -56,6 +75,30 @@ export function ResultScreen() {
         <p className={`text-sm mt-1 ${rankEntry.color}`}>{rankEntry.label}</p>
       </motion.div>
 
+      {/* プロジェクト別結果（複数案件時） */}
+      {projects.length > 1 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="flex-shrink-0 mx-6 mb-5 p-4 bg-pm-surface rounded-xl border border-white/10"
+        >
+          <p className="text-pm-muted text-xs mb-3">── プロジェクト別結果 ──</p>
+          <div className="space-y-2">
+            {projects.map(proj => (
+              <div key={proj.id} className="flex items-center gap-3">
+                <span className={proj.status === 'won' ? 'text-pm-green' : 'text-pm-red'}>
+                  {proj.status === 'won' ? '✓' : '✕'}
+                </span>
+                <span className="text-white text-sm flex-1 truncate">{proj.name}</span>
+                <span className="text-pm-muted text-xs">Q:{Math.round(proj.qcd.quality)}</span>
+                <span className="text-pm-cyan text-xs">D:{proj.qcd.delivery}%</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
       {/* QCD詳細 */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -65,17 +108,17 @@ export function ResultScreen() {
       >
         <p className="text-pm-muted text-xs mb-3">── 評価詳細 ──</p>
         <div className="space-y-3">
-          <QCDBar label="品質（Quality）" value={qcd.quality} color="bg-pm-green" weight={35} />
+          <QCDBar label="品質（Quality）" value={avgQuality} color="bg-pm-green" weight={35} />
           <QCDBar
             label="コスト（Cost）"
-            value={Math.max(0, Math.min(100, 100 - (qcd.cost / qcd.budget) * 100 + 50))}
+            value={Math.max(0, Math.min(100, 100 - (avgCost / avgBudget) * 100 + 50))}
             color="bg-pm-cyan"
             weight={25}
-            sublabel={`${qcd.cost}万/${qcd.budget}万`}
+            sublabel={`${Math.round(avgCost)}万/${Math.round(avgBudget)}万`}
           />
           <QCDBar
             label="納期（Delivery）"
-            value={won ? 100 : qcd.delivery}
+            value={won ? 100 : avgDelivery}
             color="bg-pm-yellow"
             weight={40}
           />
@@ -179,7 +222,10 @@ function QCDBar({
     <div>
       <div className="flex justify-between text-xs mb-1">
         <span className="text-pm-text">{label}</span>
-        <span className="text-pm-muted">{sublabel ?? `${Math.round(value)}`} <span className="text-pm-muted/60">（×{weight}%）</span></span>
+        <span className="text-pm-muted">
+          {sublabel ?? `${Math.round(value)}`}{' '}
+          <span className="text-pm-muted/60">（×{weight}%）</span>
+        </span>
       </div>
       <div className="h-2 bg-black/40 rounded-full overflow-hidden">
         <motion.div

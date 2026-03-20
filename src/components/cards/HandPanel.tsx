@@ -1,26 +1,20 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../../store/gameStore'
-import type { PersonnelCard, EventCard } from '../../types/card'
+import type { PersonnelCard } from '../../types/card'
 import { cn } from '../../utils/cn'
 
 const PERSONNEL_TYPE_COLOR: Record<string, string> = {
   engineer: 'border-pm-cyan/40',
   newcomer: 'border-pm-yellow/30',
-  freelance: 'border-pm-orange/40',
-  lead: 'border-pm-blue/60',
+  specialist: 'border-orange-400/40',
+  lead: 'border-blue-400/60',
 }
 const PERSONNEL_TYPE_BG: Record<string, string> = {
   engineer: 'bg-pm-cyan/10',
   newcomer: 'bg-pm-yellow/5',
-  freelance: 'bg-pm-orange/10',
-  lead: 'bg-pm-blue/15',
-}
-const SEVERITY_COLOR: Record<string, string> = {
-  positive: 'border-pm-green/40 bg-pm-green/10',
-  neutral: 'border-white/20 bg-white/5',
-  negative: 'border-pm-red/30 bg-pm-red/5',
-  critical: 'border-pm-red/60 bg-pm-red/10',
+  specialist: 'bg-orange-500/10',
+  lead: 'bg-blue-500/15',
 }
 const SKILL_ICON: Record<string, string> = {
   frontend: 'F', backend: 'B', infra: 'I', qa: 'Q', design: 'D', general: 'G',
@@ -35,11 +29,11 @@ const SKILL_COLOR: Record<string, string> = {
 }
 
 export function HandPanel() {
-  const { hand, activePersonnel } = useGameStore()
+  const { hand, activePersonnel, deck } = useGameStore()
   const [selectedCard, setSelectedCard] = useState<string | null>(null)
   const [isExpanded, setIsExpanded] = useState(true)
 
-  const selectedCardData = hand.find(c => c.id === selectedCard)
+  const selectedCardData = hand.find(c => c.id === selectedCard) as PersonnelCard | undefined
 
   return (
     <div className="flex-shrink-0 bg-pm-surface/90 border-t border-white/10">
@@ -49,13 +43,16 @@ export function HandPanel() {
         className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5"
       >
         <div className="flex items-center gap-2">
-          <span className="text-pm-muted text-xs tracking-wider">手札</span>
+          <span className="text-pm-muted text-xs tracking-wider">人員カード</span>
           <span className="text-pm-cyan text-xs bg-pm-cyan/20 px-1.5 py-0.5 rounded-full">
-            {hand.length}
+            手札 {hand.length}
+          </span>
+          <span className="text-pm-muted text-xs bg-white/5 px-1.5 py-0.5 rounded-full">
+            山札 {deck.length}
           </span>
           {activePersonnel.length > 0 && (
             <>
-              <span className="text-pm-muted text-xs">/ アクティブ</span>
+              <span className="text-pm-muted text-xs">/ 稼働</span>
               <span className="text-pm-green text-xs bg-pm-green/20 px-1.5 py-0.5 rounded-full">
                 {activePersonnel.length}名
               </span>
@@ -75,7 +72,7 @@ export function HandPanel() {
           >
             {/* カード詳細表示 */}
             {selectedCardData && (
-              <CardDetail
+              <PersonnelDetail
                 card={selectedCardData}
                 onClose={() => setSelectedCard(null)}
               />
@@ -107,15 +104,10 @@ export function HandPanel() {
                   onClick={() => setSelectedCard(card.id === selectedCard ? null : card.id)}
                   className={cn(
                     'flex-shrink-0 cursor-pointer',
-                    selectedCard === card.id ? 'scale-105' : ''
+                    selectedCard === card.id ? 'scale-105' : '',
                   )}
                 >
-                  {card.type === 'personnel' && (
-                    <PersonnelMiniCard card={card} isSelected={selectedCard === card.id} />
-                  )}
-                  {card.type === 'event' && (
-                    <EventMiniCard card={card} isSelected={selectedCard === card.id} />
-                  )}
+                  <PersonnelMiniCard card={card as PersonnelCard} isSelected={selectedCard === card.id} />
                 </motion.div>
               ))}
             </div>
@@ -159,26 +151,11 @@ function PersonnelMiniCard({ card, isSelected }: { card: PersonnelCard; isSelect
   )
 }
 
-function EventMiniCard({ card, isSelected }: { card: EventCard; isSelected: boolean }) {
-  return (
-    <div className={cn(
-      'w-24 p-2 rounded-lg border transition-all card-shadow select-none',
-      SEVERITY_COLOR[card.severity],
-      isSelected ? 'ring-1 ring-pm-yellow' : '',
-    )}>
-      <p className="text-[10px] text-pm-muted mb-0.5">イベント</p>
-      <p className="text-white text-[11px] font-bold leading-tight">{card.name}</p>
-      <p className="text-pm-muted text-[9px] mt-1 line-clamp-2">{card.description.slice(0, 30)}...</p>
-    </div>
-  )
-}
-
 function ActivePersonnelChip({ personnel }: { personnel: PersonnelCard }) {
   function handleDragStart(e: React.DragEvent) {
     e.dataTransfer.setData('personnelId', personnel.id)
   }
 
-  const hasFire = false // 将来的に状態異常
   const taskLabel = personnel.assignedTaskId ? '作業中' : '待機'
 
   return (
@@ -200,7 +177,7 @@ function ActivePersonnelChip({ personnel }: { personnel: PersonnelCard }) {
   )
 }
 
-function CardDetail({ card, onClose }: { card: PersonnelCard | EventCard; onClose: () => void }) {
+function PersonnelDetail({ card, onClose }: { card: PersonnelCard; onClose: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -208,51 +185,41 @@ function CardDetail({ card, onClose }: { card: PersonnelCard | EventCard; onClos
       exit={{ opacity: 0 }}
       className="mx-3 mb-2 p-3 bg-pm-card rounded-xl border border-white/15"
     >
-      {card.type === 'personnel' && (
+      <div className="flex justify-between items-start mb-2">
         <div>
-          <div className="flex justify-between items-start mb-2">
-            <div>
-              <p className="text-white font-bold">{card.name}</p>
-              <p className="text-pm-muted text-xs">{card.title}</p>
-            </div>
-            <button onClick={onClose} className="text-pm-muted text-sm hover:text-white">✕</button>
-          </div>
-          <div className="grid grid-cols-3 gap-2 text-center text-xs mb-2">
-            <div className="bg-black/30 rounded p-1">
-              <p className="text-pm-muted text-[9px]">出力</p>
-              <p className="text-pm-cyan font-bold">{card.productivity}pt</p>
-            </div>
-            <div className="bg-black/30 rounded p-1">
-              <p className="text-pm-muted text-[9px]">コスト</p>
-              <p className="text-pm-yellow font-bold">¥{card.costPerTurn}万</p>
-            </div>
-            <div className="bg-black/30 rounded p-1">
-              <p className="text-pm-muted text-[9px]">ミス率</p>
-              <p className="text-pm-red font-bold">{Math.round(card.bugRate * 100)}%</p>
-            </div>
-          </div>
-          <div className="flex gap-1 flex-wrap mb-2">
-            {card.skills.map(s => (
-              <span key={s} className={cn('text-[10px] px-1.5 py-0.5 rounded', SKILL_COLOR[s])}>
-                {s}
-              </span>
-            ))}
-          </div>
-          <p className="text-pm-muted text-xs italic">{card.flavor}</p>
-          <p className="text-pm-cyan text-[10px] mt-1">↑ WBSのタスクへドラッグしてアサイン</p>
+          <p className="text-white font-bold">{card.name}</p>
+          <p className="text-pm-muted text-xs">{card.title}</p>
         </div>
-      )}
-      {card.type === 'event' && (
-        <div>
-          <div className="flex justify-between items-start mb-2">
-            <p className="text-white font-bold">{card.name}</p>
-            <button onClick={onClose} className="text-pm-muted text-sm hover:text-white">✕</button>
-          </div>
-          <p className="text-pm-text text-xs mb-2">{card.description}</p>
-          <p className="text-pm-muted text-xs italic">{card.flavor}</p>
-          <p className="text-pm-yellow text-[10px] mt-1">※ このカードはターン終了時に自動発動する場合があります</p>
+        <button onClick={onClose} className="text-pm-muted text-sm hover:text-white">✕</button>
+      </div>
+      <div className="grid grid-cols-3 gap-2 text-center text-xs mb-2">
+        <div className="bg-black/30 rounded p-1">
+          <p className="text-pm-muted text-[9px]">出力</p>
+          <p className="text-pm-cyan font-bold">{card.productivity}pt</p>
         </div>
+        <div className="bg-black/30 rounded p-1">
+          <p className="text-pm-muted text-[9px]">コスト</p>
+          <p className="text-pm-yellow font-bold">¥{card.costPerTurn}万</p>
+        </div>
+        <div className="bg-black/30 rounded p-1">
+          <p className="text-pm-muted text-[9px]">ミス率</p>
+          <p className="text-pm-red font-bold">{Math.round(card.bugRate * 100)}%</p>
+        </div>
+      </div>
+      <div className="flex gap-1 flex-wrap mb-2">
+        {card.skills.map(s => (
+          <span key={s} className={cn('text-[10px] px-1.5 py-0.5 rounded', SKILL_COLOR[s])}>
+            {s}
+          </span>
+        ))}
+      </div>
+      <p className="text-pm-muted text-xs italic mb-1">{card.flavor}</p>
+      {card.personalEvents.length > 0 && (
+        <p className="text-pm-yellow text-[9px] mt-1">
+          トリガーイベント: {card.personalEvents.length}種
+        </p>
       )}
+      <p className="text-pm-cyan text-[10px] mt-1">↑ WBSのタスクへドラッグしてアサイン</p>
     </motion.div>
   )
 }

@@ -8,6 +8,7 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     title: 'バックエンドエンジニア', skills: ['backend'],
     productivity: 20, bugRate: 0.05, costPerTurn: 80,
     flavor: '寡黙だが仕事は速い。レビューは苦手。',
+    personalEvents: ['e_tech_debt', 'e_overtime'],
     turnsOnTask: 0, condition: 100,
   },
   {
@@ -16,6 +17,7 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     title: 'フロントエンドエンジニア', skills: ['frontend'],
     productivity: 18, bugRate: 0.06, costPerTurn: 75,
     flavor: 'デザインへのこだわりが強すぎる。',
+    personalEvents: ['e_spec_change_minor', 'e_new_tool'],
     turnsOnTask: 0, condition: 100,
   },
   {
@@ -24,6 +26,7 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     title: '新卒エンジニア', skills: ['general'],
     productivity: 8, bugRate: 0.25, costPerTurn: 30,
     flavor: '積極的だが経験が足りない。育てれば伸びる。',
+    personalEvents: ['e_flu', 'e_new_tool'],
     turnsOnTask: 0, condition: 100,
   },
   {
@@ -32,6 +35,7 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     title: '第二新卒エンジニア', skills: ['general'],
     productivity: 6, bugRate: 0.30, costPerTurn: 28,
     flavor: '前職は飲食業。でも熱意はある。',
+    personalEvents: ['e_flu', 'e_meeting_hell'],
     turnsOnTask: 0, condition: 100,
   },
   {
@@ -40,6 +44,7 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     title: 'テックリード', skills: ['backend', 'frontend'],
     productivity: 15, bugRate: 0.04, costPerTurn: 100,
     flavor: 'マネジメントもできる稀有な存在。',
+    personalEvents: ['e_code_review_find', 'e_overtime'],
     turnsOnTask: 0, condition: 100,
   },
   {
@@ -48,6 +53,7 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     title: 'インフラエンジニア', skills: ['infra'],
     productivity: 20, bugRate: 0.04, costPerTurn: 90,
     flavor: 'インフラ以外には興味がない。本当に。',
+    personalEvents: ['e_new_tool', 'e_tech_debt'],
     turnsOnTask: 0, condition: 100,
   },
   {
@@ -56,14 +62,16 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     title: 'QAエンジニア', skills: ['qa'],
     productivity: 12, bugRate: 0.01, costPerTurn: 70,
     flavor: 'バグを見つけるのが生きがい。',
+    personalEvents: ['e_code_review_find', 'e_client_happy'],
     turnsOnTask: 0, condition: 100,
   },
   {
     id: 'p_fl_fujiwara', type: 'personnel', rarity: 'rare',
-    personnelType: 'freelance', name: '藤原フリーランス',
-    title: 'フルスタックエンジニア', skills: ['backend', 'frontend', 'infra'],
+    personnelType: 'specialist', name: '藤原スペシャリスト',
+    title: 'フルスタックスペシャリスト', skills: ['backend', 'frontend', 'infra'],
     productivity: 28, bugRate: 0.03, costPerTurn: 150,
-    flavor: '高いが確実。でも3ターンで去る。',
+    flavor: '高いが確実。専門知識は本物。',
+    personalEvents: ['e_overtime', 'e_spec_change_minor'],
     turnsOnTask: 0, condition: 100,
   },
   {
@@ -72,6 +80,7 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     title: 'UIデザイナー', skills: ['design', 'frontend'],
     productivity: 14, bugRate: 0.05, costPerTurn: 65,
     flavor: 'ピクセルパーフェクトにこだわる職人。',
+    personalEvents: ['e_spec_change_minor', 'e_client_happy'],
     turnsOnTask: 0, condition: 100,
   },
   {
@@ -80,14 +89,62 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     title: 'フルスタックエンジニア', skills: ['frontend', 'backend'],
     productivity: 16, bugRate: 0.08, costPerTurn: 110,
     flavor: '器用貧乏と言われるが本人は気にしていない。',
+    personalEvents: ['e_flu', 'e_tech_debt'],
     turnsOnTask: 0, condition: 100,
   },
   {
     id: 'p_god_engineer', type: 'personnel', rarity: 'legendary',
-    personnelType: 'freelance', name: '伝説のエンジニア・坂本',
+    personnelType: 'specialist', name: '伝説のエンジニア・坂本',
     title: '神エンジニア', skills: ['backend', 'frontend', 'infra', 'qa'],
     productivity: 40, bugRate: 0.01, costPerTurn: 250,
     flavor: 'GitHubのスター数が笑えない数字。来てくれるだけで奇跡。',
+    personalEvents: ['e_code_review_find', 'e_client_happy', 'e_god_engineer'],
+    turnsOnTask: 0, condition: 100,
+  },
+  // ── 追加エンジニア（大規模チーム向け） ──────────────────────
+  {
+    id: 'p_ohno', type: 'personnel', rarity: 'uncommon',
+    personnelType: 'engineer', name: '大野データエンジニア',
+    title: 'データエンジニア', skills: ['backend', 'infra'],
+    productivity: 22, bugRate: 0.04, costPerTurn: 95,
+    flavor: 'データパイプラインを愛している。',
+    personalEvents: ['e_tech_debt', 'e_new_tool'],
+    turnsOnTask: 0, condition: 100,
+  },
+  {
+    id: 'p_nishimura', type: 'personnel', rarity: 'uncommon',
+    personnelType: 'engineer', name: '西村セキュリティ担当',
+    title: 'セキュリティエンジニア', skills: ['infra', 'qa'],
+    productivity: 18, bugRate: 0.02, costPerTurn: 105,
+    flavor: '脆弱性を見つけることで眠れる夜がある。',
+    personalEvents: ['e_code_review_find', 'e_meeting_hell'],
+    turnsOnTask: 0, condition: 100,
+  },
+  {
+    id: 'p_kobayashi', type: 'personnel', rarity: 'uncommon',
+    personnelType: 'lead', name: '小林スクラムマスター',
+    title: 'スクラムマスター', skills: ['general'],
+    productivity: 12, bugRate: 0.03, costPerTurn: 120,
+    flavor: 'チームの潤滑油。本人の生産性より他者の生産性を上げる。',
+    personalEvents: ['e_overtime', 'e_client_happy'],
+    turnsOnTask: 0, condition: 100,
+  },
+  {
+    id: 'p_hashimoto', type: 'personnel', rarity: 'uncommon',
+    personnelType: 'engineer', name: '橋本シニアデザイナー',
+    title: 'シニアUIデザイナー', skills: ['design', 'frontend'],
+    productivity: 16, bugRate: 0.04, costPerTurn: 115,
+    flavor: 'UXは哲学だと信じている。',
+    personalEvents: ['e_spec_change_minor', 'e_client_happy'],
+    turnsOnTask: 0, condition: 100,
+  },
+  {
+    id: 'p_watanabe', type: 'personnel', rarity: 'uncommon',
+    personnelType: 'engineer', name: '渡辺モバイルエンジニア',
+    title: 'モバイルエンジニア', skills: ['frontend'],
+    productivity: 20, bugRate: 0.06, costPerTurn: 100,
+    flavor: 'iOS/Android両方できる。本人は当然だと思っている。',
+    personalEvents: ['e_new_tool', 'e_flu'],
     turnsOnTask: 0, condition: 100,
   },
 ]
@@ -188,7 +245,7 @@ export const EVENT_CARDS: EventCard[] = [
     name: '炎上発生',
     description: 'バグ報告が殺到している。プロジェクトが炎上状態に突入。',
     severity: 'critical',
-    flavor: '🔥 誰も望んでいなかった。でも誰も止められなかった。',
+    flavor: '誰も望んでいなかった。でも誰も止められなかった。',
     choices: [
       {
         id: 'all_hands',
@@ -221,7 +278,7 @@ export const EVENT_CARDS: EventCard[] = [
     ],
   },
   {
-    id: 'e_review',
+    id: 'e_code_review_find',
     type: 'event',
     name: 'コードレビュー発見',
     description: 'レビュー中に重大なバグが見つかった。早期発見で被害が最小限。',

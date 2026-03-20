@@ -44,6 +44,7 @@ export interface ProgressResult {
   taskId: string
   progressGained: number
   bugsAdded: number
+  skillPointsEarned: number  // タスク完了時にstoreで計算、ここでは常に0
 }
 
 export function calculateProgress(
@@ -52,7 +53,7 @@ export function calculateProgress(
   skillEffects: SkillEffect = {},
 ): ProgressResult {
   if (task.status === 'done' || task.status === 'locked' || task.status === 'failed') {
-    return { taskId: task.id, progressGained: 0, bugsAdded: 0 }
+    return { taskId: task.id, progressGained: 0, bugsAdded: 0, skillPointsEarned: 0 }
   }
 
   const continuityMult = skillEffects.continuityBonusMultiplier ?? 1.0
@@ -80,10 +81,10 @@ export function calculateProgress(
   }
   const bugsAdded = Math.random() < bugProb ? 1 : 0
 
-  return { taskId: task.id, progressGained: progress, bugsAdded }
+  return { taskId: task.id, progressGained: progress, bugsAdded, skillPointsEarned: 0 }
 }
 
-// スコア計算
+// スコア計算（複数プロジェクト対応: 平均QCDを使用）
 export function calculateFinalScore(
   quality: number,
   cost: number,

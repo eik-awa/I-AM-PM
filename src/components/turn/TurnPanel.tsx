@@ -3,10 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../../store/gameStore'
 
 export function TurnPanel() {
-  const { turn, endTurn, activePersonnel, phases, activeEvent, log } = useGameStore()
+  const { turn, endTurn, activePersonnel, projects, activeProjectId, activeEvent, log } = useGameStore()
   const [showLog, setShowLog] = useState(false)
 
-  // 進捗サマリー
+  // アクティブプロジェクトの進捗サマリー
+  const activeProject = projects.find(p => p.id === activeProjectId)
+  const phases = activeProject?.phases ?? []
   const allTasks = phases.flatMap(ph => ph.tasks)
   const doneTasks = allTasks.filter(t => t.status === 'done').length
   const inProgressTasks = allTasks.filter(t => t.status === 'in_progress').length

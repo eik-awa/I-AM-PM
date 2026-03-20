@@ -2,7 +2,7 @@ export type SkillTag = 'frontend' | 'backend' | 'infra' | 'qa' | 'design' | 'gen
 
 export type CardRarity = 'common' | 'uncommon' | 'rare' | 'legendary'
 
-export type PersonnelType = 'engineer' | 'newcomer' | 'freelance' | 'lead'
+export type PersonnelType = 'engineer' | 'newcomer' | 'lead' | 'specialist'
 
 export interface PersonnelCard {
   id: string
@@ -16,6 +16,7 @@ export interface PersonnelCard {
   bugRate: number           // ミス率 0-1
   costPerTurn: number       // 万円/ターン
   flavor: string
+  personalEvents: string[]  // このメンバーが引き起こす可能性のあるイベントID
   // 実行時状態
   assignedTaskId?: string
   turnsOnTask: number       // 同一タスク継続ターン数
@@ -39,6 +40,7 @@ export interface TaskCard {
   phaseId: string
   bugs: number              // 蓄積バグ数
   statusEffects: StatusEffect[]
+  skillPointReward?: number // タスク完了時のスキルポイント（未指定なら difficulty*5）
 }
 
 export type StatusEffectType = 'fire' | 'stuck' | 'redesign' | 'debt'

@@ -4,8 +4,19 @@ import { useGameStore } from '../../store/gameStore'
 import { WBSTaskRow } from './WBSTaskRow'
 
 export function WBSBoard() {
-  const { phases } = useGameStore()
+  const { projects, activeProjectId } = useGameStore()
+  const activeProject = projects.find(p => p.id === activeProjectId)
+  const phases = activeProject?.phases ?? []
+
   const [expandedPhase, setExpandedPhase] = useState<string | null>(phases[0]?.id ?? null)
+
+  if (phases.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center text-pm-muted text-sm">
+        プロジェクトのフェーズが見つかりません
+      </div>
+    )
+  }
 
   return (
     <div className="h-full overflow-y-auto px-3 py-2 space-y-2">

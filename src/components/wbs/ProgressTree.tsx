@@ -119,7 +119,9 @@ function ConnectorArrow({ label }: { label?: string }) {
 }
 
 export function ProgressTree() {
-  const { phases, activePersonnel } = useGameStore()
+  const { projects, activeProjectId, activePersonnel } = useGameStore()
+  const activeProject = projects.find(p => p.id === activeProjectId)
+  const phases = activeProject?.phases ?? []
 
   // タスクIDから担当者名を取得
   const assignedMap: Record<string, string[]> = {}
