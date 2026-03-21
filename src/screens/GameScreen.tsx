@@ -11,9 +11,11 @@ import { QCDPanel } from '../components/qcd/QCDPanel'
 import { MissionPanel } from '../components/missions/MissionPanel'
 import { GanttChart } from '../components/gantt/GanttChart'
 import { BossHintModal } from '../components/boss/BossHintModal'
+import { ComboActivationOverlay } from '../components/combo/ComboActivationOverlay'
+import { SynergyPanel } from '../components/combo/SynergyPanel'
 import { cn } from '../utils/cn'
 
-type Tab = 'board' | 'gantt' | 'tree' | 'missions' | 'qcd'
+type Tab = 'board' | 'gantt' | 'tree' | 'missions' | 'qcd' | 'synergy'
 
 const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
   active: { label: '進行中', cls: 'bg-pm-cyan/20 text-pm-cyan border-pm-cyan/30' },
@@ -32,6 +34,8 @@ export function GameScreen() {
     mode,
     status,
     bossHints,
+    discoveredCombos,
+    nextEventPreview,
   } = useGameStore()
 
   const [tab, setTab] = useState<Tab>('board')
@@ -103,6 +107,16 @@ export function GameScreen() {
         <TabButton active={tab === 'qcd'} onClick={() => setTab('qcd')}>
           📈
         </TabButton>
+        <TabButton active={tab === 'synergy'} onClick={() => setTab('synergy')}>
+          <span className="relative">
+            ⚡
+            {discoveredCombos.length > 0 && (
+              <span className="absolute -top-1 -right-2 w-3.5 h-3.5 bg-pm-cyan rounded-full text-[8px] font-bold text-pm-bg flex items-center justify-center">
+                {discoveredCombos.length}
+              </span>
+            )}
+          </span>
+        </TabButton>
         <div className="flex-1" />
         <button
           onClick={() => {
@@ -123,6 +137,8 @@ export function GameScreen() {
           {totalMissions > 0 ? `${completedMissions}/${totalMissions}` : 'ミッション'}
         </TabLabel>
         <TabLabel active={tab === 'qcd'}>QCDパネル</TabLabel>
+        <TabLabel active={tab === 'synergy'}>シナジー</TabLabel>
+        <div className="w-8 flex-shrink-0" />
       </div>
 
       {/* メインコンテンツ */}
@@ -141,6 +157,7 @@ export function GameScreen() {
             {tab === 'tree' && <ProgressTree />}
             {tab === 'missions' && <MissionPanel />}
             {tab === 'qcd' && <QCDPanel />}
+            {tab === 'synergy' && <SynergyPanel />}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -151,10 +168,21 @@ export function GameScreen() {
       {/* ターン終了パネル */}
       <TurnPanel />
 
+      {/* 木村コンボ: 次ターンイベントプレビュー */}
+      {nextEventPreview && (
+        <div className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 bg-indigo-900/40 border-t border-indigo-500/30 text-xs">
+          <span className="text-indigo-300">👁 木村の予知</span>
+          <span className="text-indigo-200 font-medium">次のイベント: {nextEventPreview}</span>
+        </div>
+      )}
+
       {/* イベントモーダル */}
       <AnimatePresence>
         {activeEvent && <EventModal />}
       </AnimatePresence>
+
+      {/* コンボ発動演出 */}
+      <ComboActivationOverlay />
 
       {/* ボスヒントモーダル（ゲーム終了時） */}
       {shouldShowBossHint && (

@@ -385,7 +385,7 @@ export function TutorialScreen() {
               className="text-6xl font-bold text-pm-cyan title-glow"
               style={{ fontFamily: 'monospace' }}
             >
-              I AM PM
+              AM I PM
             </motion.h1>
             <motion.p
               initial={{ opacity: 0 }}

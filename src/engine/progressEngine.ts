@@ -1,5 +1,6 @@
 import type { PersonnelCard, TaskCard } from '../types/card'
 import type { SkillEffect } from '../types/skill'
+import type { ComboEffect } from '../types/combo'
 
 // スキル適性係数
 function skillMultiplier(personnel: PersonnelCard, task: TaskCard): number {
@@ -40,6 +41,15 @@ function teamMultiplier(count: number): number {
   return 1.0
 }
 
+// 実際の出力をactualOutputRangeでランダム化（隠れた個性）
+function actualOutput(personnel: PersonnelCard, base: number): number {
+  const [min, max] = personnel.actualOutputRange
+  // 1回目使用はブレなし（表示通り）、2回目以降からブレが出る
+  if (personnel.analysisCount < 1) return base
+  const variance = Math.random() * (max - min) + min
+  return variance
+}
+
 export interface ProgressResult {
   taskId: string
   progressGained: number
@@ -47,34 +57,51 @@ export interface ProgressResult {
   skillPointsEarned: number  // タスク完了時にstoreで計算、ここでは常に0
 }
 
+// アクティブなコンボ効果をマージして単一のComboEffectに集約
+export function mergeComboEffects(effects: ComboEffect[]): ComboEffect {
+  return effects.reduce<ComboEffect>((acc, e) => ({
+    bugRateMultiplier: (acc.bugRateMultiplier ?? 1.0) * (e.bugRateMultiplier ?? 1.0),
+    productivityMultiplier: (acc.productivityMultiplier ?? 1.0) * (e.productivityMultiplier ?? 1.0),
+    eventProbMultiplier: (acc.eventProbMultiplier ?? 1.0) * (e.eventProbMultiplier ?? 1.0),
+    personnelProductivityMultiplier: e.personnelProductivityMultiplier ?? acc.personnelProductivityMultiplier,
+    nextEventPreview: acc.nextEventPreview || e.nextEventPreview,
+  }), {})
+}
+
 export function calculateProgress(
   task: TaskCard,
   assignedPersonnel: PersonnelCard[],
   skillEffects: SkillEffect = {},
+  comboEffect: ComboEffect = {},
+  awakeningPersonnelId?: string,  // 覚醒コンボが有効な人員ID
 ): ProgressResult {
   if (task.status === 'done' || task.status === 'locked' || task.status === 'failed') {
     return { taskId: task.id, progressGained: 0, bugsAdded: 0, skillPointsEarned: 0 }
   }
 
   const continuityMult = skillEffects.continuityBonusMultiplier ?? 1.0
+  const comboProductivityMult = comboEffect.productivityMultiplier ?? 1.0
+  const comboPersonnelMult = comboEffect.personnelProductivityMultiplier ?? 1.0
 
   let totalOutput = 0
   for (const p of assignedPersonnel) {
-    const base = p.productivity + (skillEffects.productivityBonus ?? 0)
+    const base = actualOutput(p, p.productivity + (skillEffects.productivityBonus ?? 0))
     const skill = skillMultiplier(p, task)
     const continuity = continuityBonus(p.turnsOnTask) * continuityMult
     const condition = conditionMultiplier(p.condition)
-    totalOutput += base * skill * continuity * condition
+    // 覚醒コンボ: 山田新人が対象の場合、個別出力倍率を適用
+    const awakeningMult = (awakeningPersonnelId && p.id === awakeningPersonnelId) ? comboPersonnelMult : 1.0
+    totalOutput += base * skill * continuity * condition * awakeningMult
   }
 
   const team = teamMultiplier(assignedPersonnel.length)
   const fire = fireMultiplier(task)
   const diff = difficultyMultiplier(task.difficulty)
 
-  const progress = Math.round(totalOutput * team * fire * diff)
+  const progress = Math.round(totalOutput * team * fire * diff * comboProductivityMult)
 
-  // バグ計算（スキルでバグ率軽減）
-  const bugRateMult = skillEffects.bugRateMultiplier ?? 1.0
+  // バグ計算（スキルとコンボでバグ率軽減）
+  const bugRateMult = (skillEffects.bugRateMultiplier ?? 1.0) * (comboEffect.bugRateMultiplier ?? 1.0)
   let bugProb = 0
   for (const p of assignedPersonnel) {
     bugProb += p.bugRate * bugRateMult * task.difficulty * 0.5

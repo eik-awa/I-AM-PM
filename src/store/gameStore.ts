@@ -7,12 +7,14 @@ import type {
 import type { PersonnelCard, EventCard, TaskCard } from '../types/card'
 import type { Mission, MissionDef } from '../types/mission'
 import type { SkillEffect } from '../types/skill'
+import type { ComboRecipe, ActiveComboEffect, ComboEffect } from '../types/combo'
 import { PERSONNEL_CARDS, EVENT_CARDS } from '../constants/cards'
 import { MISSION_POOL } from '../constants/missions'
 import { SKILL_TREE } from '../constants/skills'
 import { getScenariosForMode } from '../constants/scenarios'
 import { GAME_MODES } from '../constants/gameModes'
-import { calculateProgress, calculateFinalScore } from '../engine/progressEngine'
+import { COMBO_RECIPES } from '../constants/combos'
+import { calculateProgress, calculateFinalScore, mergeComboEffects } from '../engine/progressEngine'
 import { shuffle } from '../utils/random'
 
 interface GameStore extends GameState {
@@ -26,6 +28,7 @@ interface GameStore extends GameState {
   endTurn: () => void
   resolveEvent: (eventId: string, choiceId: string) => void
   dismissEvent: () => void
+  dismissComboActivation: () => void
   goToTitle: () => void
   addLog: (msg: string, type: LogEntry['type']) => void
   unlockSkill: (skillId: string) => void
@@ -134,6 +137,40 @@ function buildProjectInstances(mode: GameMode, startQuality: number): ProjectIns
   }))
 }
 
+// ── コンボ判定ヘルパー ─────────────────────────────────────
+
+function evaluateComboConditions(
+  activePersonnel: PersonnelCard[],
+  projects: ProjectInstance[],
+): ComboRecipe[] {
+  const active: ComboRecipe[] = []
+  for (const recipe of COMBO_RECIPES) {
+    const cond = recipe.condition
+    if (cond.type === 'colorSet') {
+      const color = cond.color!
+      const minCount = cond.minCount ?? 3
+      const count = activePersonnel.filter(p => p.assignedTaskId && p.color === color).length
+      if (count >= minCount) active.push(recipe)
+    } else if (cond.type === 'personnelChain') {
+      const person = activePersonnel.find(p => p.id === cond.personnelId)
+      if (!person || !person.assignedTaskId) continue
+      // 担当タスクを取得
+      let task: TaskCard | undefined
+      for (const proj of projects) {
+        task = findTaskInProject(proj, person.assignedTaskId)
+        if (task) break
+      }
+      if (!task) continue
+      if (cond.requiredTaskSkill && task.requiredSkill !== cond.requiredTaskSkill) continue
+      if (cond.requiresPreviousTask && !person.previousTaskId) continue
+      if (cond.minTurnsOnTask && person.turnsOnTask < cond.minTurnsOnTask) continue
+      if (cond.taskHasBugs && task.bugs === 0) continue
+      active.push(recipe)
+    }
+  }
+  return active
+}
+
 function getTotalTurnsForMode(mode: GameMode): number {
   const scenarios = getScenariosForMode(mode)
   return Math.max(...scenarios.map(s => s.totalTurns))
@@ -233,6 +270,10 @@ const initialState: GameState = {
   log: [],
   missions: [],
   missionStats: { maxTasksInOneTurn: 0, maxSimultaneousPersonnel: 0 },
+  discoveredCombos: [],
+  activeComboEffects: [],
+  pendingComboActivation: null,
+  nextEventPreview: null,
   totalRuns: 0,
   bestScore: 0,
   pmPoints: 0,
@@ -300,6 +341,10 @@ export const useGameStore = create<GameStore>()(
           log: [{ turn: 1, message: 'プロジェクト開始。最初の一手を考えよう。', type: 'info' }],
           missions: selectMissions(mode),
           missionStats: { maxTasksInOneTurn: 0, maxSimultaneousPersonnel: 0 },
+          discoveredCombos: [],
+          activeComboEffects: [],
+          pendingComboActivation: null,
+          nextEventPreview: null,
         })
       },
 
@@ -402,12 +447,83 @@ export const useGameStore = create<GameStore>()(
           totalCostThisTurn += Math.round(p.costPerTurn * costMult * 0.5)
         }
 
+        // ── コンボ判定 ────────────────────────────────────────
+        const currentCombos = evaluateComboConditions(state.activePersonnel, state.projects)
+        const newlyDiscovered = currentCombos.filter(c => !state.discoveredCombos.includes(c.id))
+
+        // アクティブコンボエフェクトの更新
+        // blitzコンボの持続ターン数を管理
+        const prevActiveComboEffects = state.activeComboEffects
+        const updatedActiveEffects: ActiveComboEffect[] = []
+        for (const recipe of currentCombos) {
+          const existing = prevActiveComboEffects.find(e => e.comboId === recipe.id)
+          if (existing) {
+            const newTurnsActive = existing.turnsActive + 1
+            const turnsRemaining = recipe.effect.comboTurns
+              ? recipe.effect.comboTurns - newTurnsActive
+              : -1
+            if (turnsRemaining === undefined || turnsRemaining >= 0 || turnsRemaining === -1) {
+              updatedActiveEffects.push({
+                comboId: recipe.id,
+                turnsActive: newTurnsActive,
+                turnsRemaining: turnsRemaining,
+              })
+            }
+          } else {
+            updatedActiveEffects.push({
+              comboId: recipe.id,
+              turnsActive: 1,
+              turnsRemaining: recipe.effect.comboTurns ? recipe.effect.comboTurns - 1 : -1,
+            })
+          }
+        }
+
+        // 有効なコンボエフェクトをマージ（期限切れを除外）
+        const effectiveComboEffects = updatedActiveEffects
+          .filter(e => e.turnsRemaining === -1 || e.turnsRemaining >= 0)
+          .map(e => COMBO_RECIPES.find(r => r.id === e.comboId)?.effect ?? {} as ComboEffect)
+        const mergedComboEffect = mergeComboEffects(effectiveComboEffects)
+
+        // blitzコンボ: 4ターン目に炎上イベントを強制発生
+        const blitzEffect = updatedActiveEffects.find(e => e.comboId === 'combo_blitz_set')
+        const shouldTriggerBlitzFire = blitzEffect && blitzEffect.turnsActive >= 4
+
+        // 木村コンボ: nextEventPreviewを更新
+        const hasKimuraCombo = updatedActiveEffects.some(e => e.comboId === 'combo_kimura_chain')
+
+        // 覚醒コンボ: 山田新人が対象
+        const awakeningEffect = updatedActiveEffects.find(e => e.comboId === 'combo_yamada_awakening')
+        const awakeningPersonnelId = awakeningEffect ? 'p_yamada' : undefined
+
+        // tech set コンボ: 品質への軽微なペナルティ（コミュニケーションコスト）
+        const hasTechSet = updatedActiveEffects.some(e => e.comboId === 'combo_tech_set')
+
+        // 新規発動ログ
+        for (const c of newlyDiscovered) {
+          newLogs.push({
+            turn: state.turn.current,
+            message: `🌟 コンボ発動！「${c.name}」— ${c.flavorText}`,
+            type: 'success',
+          })
+        }
+        if (newlyDiscovered.length > 0) {
+          for (const c of currentCombos) {
+            newLogs.push({
+              turn: state.turn.current,
+              message: `⚡ [${c.name}] 効果中`,
+              type: 'info',
+            })
+          }
+        }
+
         // ── 各プロジェクトの進捗計算 ─────────────────────────
         const updatedProjects: ProjectInstance[] = state.projects.map(project => {
           if (project.status !== 'active') return project
 
           const phases = deepCopyPhases(project.phases)
           let qualityDelta = 0
+          // tech setコンボ: コミュニケーションコスト微増（品質-2）
+          if (hasTechSet) qualityDelta -= 2
           const projectTasksCompleted: string[] = []
 
           for (const phase of phases) {
@@ -418,7 +534,7 @@ export const useGameStore = create<GameStore>()(
               if (assigned.length === 0) continue
 
               task.status = 'in_progress'
-              const result = calculateProgress(task, assigned, skillEffects)
+              const result = calculateProgress(task, assigned, skillEffects, mergedComboEffect, awakeningPersonnelId)
               task.effortDone = Math.min(task.effortTotal, task.effortDone + result.progressGained)
               task.bugs += result.bugsAdded
 
@@ -515,8 +631,23 @@ export const useGameStore = create<GameStore>()(
         })
 
         // ── 人員の継続ターン更新 ──────────────────────────────
+        // 完了タスクIDを収集（全プロジェクト横断）
+        const allCompletedTaskIds = new Set(
+          updatedProjects.flatMap(proj =>
+            proj.phases.flatMap(ph => ph.tasks.filter(t => t.status === 'done').map(t => t.id))
+          )
+        )
         const conditionRecovery = 5 + (skillEffects.conditionRecoveryBonus ?? 0)
         const updatedPersonnel = state.activePersonnel.map(p => {
+          // タスクが完了していたらアサインをクリアして待機状態に（activePersonnelには残る）
+          if (p.assignedTaskId && allCompletedTaskIds.has(p.assignedTaskId)) {
+            return {
+              ...p,
+              assignedTaskId: undefined,
+              turnsOnTask: 0,
+              condition: Math.min(100, p.condition + conditionRecovery),
+            }
+          }
           if (p.assignedTaskId) {
             return { ...p, turnsOnTask: p.turnsOnTask + 1 }
           }
@@ -671,28 +802,68 @@ export const useGameStore = create<GameStore>()(
           newDiscard = [...newDiscard, ...newHand.splice(handLimit)]
         }
 
+        // ── 人員のpreviousTaskId更新 ──────────────────────────
+        const updatedPersonnelWithPrev = updatedPersonnel.map(p => ({
+          ...p,
+          previousTaskId: p.assignedTaskId ?? p.previousTaskId,
+          analysisCount: p.assignedTaskId ? p.analysisCount + 1 : p.analysisCount,
+        }))
+
         // ── イベント発生（アクティブメンバーのpersonalEventsから） ──
         const pendingEvents: EventCard[] = []
         const eventReduction = skillEffects.eventProbReduction ?? 0
-        const eventProb = Math.max(0, 0.25 + (nextTurn / state.turn.max) * 0.2 - eventReduction)
+        // adjustコンボでイベント発生率を減少
+        const comboEventMult = mergedComboEffect.eventProbMultiplier ?? 1.0
+        const eventProb = Math.max(0, (0.25 + (nextTurn / state.turn.max) * 0.2 - eventReduction) * comboEventMult)
 
-        if (Math.random() < eventProb) {
-          // アクティブメンバーのpersonalEventsから選択
+        // blitz炎上強制発生
+        if (shouldTriggerBlitzFire) {
+          const fireEvent = EVENT_CARDS.find(e => e.id === 'e_fire')
+          if (fireEvent) pendingEvents.push(fireEvent)
+          newLogs.push({
+            turn: state.turn.current,
+            message: '🔥 神速チームの代償…炎上発生！',
+            type: 'danger',
+          })
+        } else if (Math.random() < eventProb) {
+          // 木村コンボ: nextEventPreviewが設定されている場合、そのイベントを引く
+          if (hasKimuraCombo && state.nextEventPreview) {
+            const previewEvent = EVENT_CARDS.find(e => e.id === state.nextEventPreview)
+            if (previewEvent) pendingEvents.push(previewEvent)
+          } else {
+            // アクティブメンバーのpersonalEventsから選択
+            const allPersonalEvents = state.activePersonnel.flatMap(p => p.personalEvents)
+            const uniqueEventIds = [...new Set(allPersonalEvents)]
+            const availableEvents = EVENT_CARDS.filter(e => uniqueEventIds.includes(e.id))
+            const fallbackEvents = EVENT_CARDS.filter(e => e.severity !== 'positive' || Math.random() < 0.3)
+            const pool = availableEvents.length > 0 ? availableEvents : fallbackEvents
+            if (pool.length > 0) {
+              const idx = Math.floor(Math.random() * pool.length)
+              pendingEvents.push(pool[idx])
+            }
+          }
+        }
+
+        // 木村コンボ: 次ターンのイベントを事前生成してpreviewに保存
+        let nextEventPreview: string | null = null
+        if (hasKimuraCombo) {
           const allPersonalEvents = state.activePersonnel.flatMap(p => p.personalEvents)
           const uniqueEventIds = [...new Set(allPersonalEvents)]
           const availableEvents = EVENT_CARDS.filter(e => uniqueEventIds.includes(e.id))
           const fallbackEvents = EVENT_CARDS.filter(e => e.severity !== 'positive' || Math.random() < 0.3)
           const pool = availableEvents.length > 0 ? availableEvents : fallbackEvents
-
           if (pool.length > 0) {
-            const idx = Math.floor(Math.random() * pool.length)
-            pendingEvents.push(pool[idx])
+            nextEventPreview = pool[Math.floor(Math.random() * pool.length)].id
           }
         }
 
+        // 新規発動コンボがあれば演出トリガー（最初の1件のみ）
+        const newPendingComboActivation = newlyDiscovered.length > 0 ? newlyDiscovered[0] : null
+        const newDiscoveredCombos = [...new Set([...state.discoveredCombos, ...newlyDiscovered.map(c => c.id)])]
+
         set({
           projects: updatedProjects,
-          activePersonnel: updatedPersonnel,
+          activePersonnel: updatedPersonnelWithPrev,
           turn: { ...state.turn, current: nextTurn },
           hand: newHand,
           deck: newDeck,
@@ -705,6 +876,10 @@ export const useGameStore = create<GameStore>()(
           log: [...state.log, ...newLogs],
           missions,
           missionStats: newMissionStats,
+          discoveredCombos: newDiscoveredCombos,
+          activeComboEffects: updatedActiveEffects,
+          pendingComboActivation: newPendingComboActivation,
+          nextEventPreview,
         })
       },
 
@@ -837,6 +1012,10 @@ export const useGameStore = create<GameStore>()(
         const state = get()
         const remaining = state.pendingEvents.slice(1)
         set({ pendingEvents: remaining, activeEvent: remaining[0] ?? null })
+      },
+
+      dismissComboActivation: () => {
+        set({ pendingComboActivation: null })
       },
 
       goToTitle: () => {

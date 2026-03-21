@@ -337,7 +337,7 @@ export function TitleScreen({ onOpenSkillTree }: { onOpenSkillTree: () => void }
             className="text-5xl font-bold tracking-tight text-pm-cyan title-glow"
             style={{ fontFamily: 'monospace' }}
           >
-            I AM PM
+            AM I PM
           </h1>
           <p className="text-pm-muted text-sm mt-2">君、次のプロジェクトのPMを任せる</p>
         </motion.div>

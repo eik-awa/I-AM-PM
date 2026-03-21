@@ -1,5 +1,6 @@
 import type { PersonnelCard, TaskCard, EventCard } from './card'
 import type { Mission } from './mission'
+import type { ComboRecipe, ActiveComboEffect } from './combo'
 
 export interface WBSPhase {
   id: string
@@ -132,6 +133,11 @@ export interface GameState {
     maxTasksInOneTurn: number
     maxSimultaneousPersonnel: number
   }
+  // シナジー（コンボ）システム
+  discoveredCombos: string[]                     // 発動済みコンボID一覧（図鑑記録）
+  activeComboEffects: ActiveComboEffect[]         // 現在有効なコンボ効果
+  pendingComboActivation: ComboRecipe | null      // 発動演出待ちコンボ（アニメーション用）
+  nextEventPreview: string | null                 // 木村コンボ: 次ターンのイベントID
   // メタ（永続）
   totalRuns: number
   bestScore: number
