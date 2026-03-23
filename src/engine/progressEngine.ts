@@ -9,6 +9,27 @@ function skillMultiplier(personnel: PersonnelCard, task: TaskCard): number {
   return 0.5
 }
 
+// エンジニアスキル係数（技術力が生産性全体に影響）
+// 50基準(1.0x)、100で1.5x、0で0.5x
+function engineeringSkillMultiplier(skill: number): number {
+  return 0.5 + (skill / 100)
+}
+
+// マネジメントスキル係数（上流工程タスクのみ追加ボーナス）
+// requiredSkill === 'general' を上流工程として判定
+// 0で0%、50で+25%、100で+50%のボーナス
+function managementMultiplier(skill: number, task: TaskCard): number {
+  if (task.requiredSkill !== 'general') return 1.0
+  return 1.0 + skill / 200
+}
+
+// コミュニケーションスキルによるバグ率補正
+// 低いと認識齟齬が発生しバグが増加
+// 0で+1.5x、50で+1.0x(基準)、100で+0.6x
+function communicationBugMultiplier(skill: number): number {
+  return 1.5 - (skill / 100) * 0.9
+}
+
 // 継続ターンボーナス
 function continuityBonus(turnsOnTask: number): number {
   if (turnsOnTask >= 3) return 1.4
@@ -91,7 +112,10 @@ export function calculateProgress(
     const condition = conditionMultiplier(p.condition)
     // 覚醒コンボ: 山田新人が対象の場合、個別出力倍率を適用
     const awakeningMult = (awakeningPersonnelId && p.id === awakeningPersonnelId) ? comboPersonnelMult : 1.0
-    totalOutput += base * skill * continuity * condition * awakeningMult
+    // エンジニアスキル・マネジメントスキルの影響
+    const engMult = engineeringSkillMultiplier(p.engineeringSkill)
+    const mgtMult = managementMultiplier(p.managementSkill, task)
+    totalOutput += base * skill * continuity * condition * awakeningMult * engMult * mgtMult
   }
 
   const team = teamMultiplier(assignedPersonnel.length)
@@ -100,11 +124,12 @@ export function calculateProgress(
 
   const progress = Math.round(totalOutput * team * fire * diff * comboProductivityMult)
 
-  // バグ計算（スキルとコンボでバグ率軽減）
+  // バグ計算（スキル・コンボ・コミュニケーションスキルでバグ率変動）
   const bugRateMult = (skillEffects.bugRateMultiplier ?? 1.0) * (comboEffect.bugRateMultiplier ?? 1.0)
   let bugProb = 0
   for (const p of assignedPersonnel) {
-    bugProb += p.bugRate * bugRateMult * task.difficulty * 0.5
+    const commMult = communicationBugMultiplier(p.communicationSkill)
+    bugProb += p.bugRate * bugRateMult * commMult * task.difficulty * 0.5
   }
   const bugsAdded = Math.random() < bugProb ? 1 : 0
 

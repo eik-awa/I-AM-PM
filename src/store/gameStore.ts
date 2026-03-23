@@ -80,6 +80,19 @@ function mergeSkillEffects(skillIds: string[]): SkillEffect {
   return effects
 }
 
+// ローグライク要素：ゲームごとにスキル値をレンジ内でランダム化
+function randomizePersonnelSkills(p: PersonnelCard): PersonnelCard {
+  const [eMin, eMax] = p.engineeringSkillRange
+  const [mMin, mMax] = p.managementSkillRange
+  const [cMin, cMax] = p.communicationSkillRange
+  return {
+    ...p,
+    engineeringSkill: Math.round(Math.random() * (eMax - eMin) + eMin),
+    managementSkill: Math.round(Math.random() * (mMax - mMin) + mMin),
+    communicationSkill: Math.round(Math.random() * (cMax - cMin) + cMin),
+  }
+}
+
 function buildInitialDeck(mode: GameMode, unlockedCharIds: string[]): PersonnelCard[] {
   const starters = [
     PERSONNEL_CARDS.find(p => p.id === 'p_tanaka')!,
@@ -101,7 +114,8 @@ function buildInitialDeck(mode: GameMode, unlockedCharIds: string[]): PersonnelC
   if (mode === 'beginner' || mode === 'tutorial') deckSize = 3
 
   const extraPick = shuffle([...extra]).slice(0, Math.max(0, deckSize - 3))
-  return shuffle([...starters, ...extraPick])
+  // ゲームごとにスキル値をランダム化（ローグライク要素）
+  return shuffle([...starters, ...extraPick]).map(randomizePersonnelSkills)
 }
 
 function selectMissions(mode: GameMode): Mission[] {

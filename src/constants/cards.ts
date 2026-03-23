@@ -10,6 +10,9 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     productivity: 20, actualOutputRange: [17, 23], bugRate: 0.05, costPerTurn: 80,
     flavor: '寡黙だが仕事は速い。レビューは苦手。',
     personalEvents: ['e_tech_debt', 'e_overtime'],
+    engineeringSkill: 65, engineeringSkillRange: [55, 75],
+    managementSkill: 25, managementSkillRange: [15, 35],
+    communicationSkill: 30, communicationSkillRange: [20, 40],
     turnsOnTask: 0, condition: 100, analysisCount: 0,
   },
   {
@@ -20,6 +23,9 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     productivity: 18, actualOutputRange: [15, 22], bugRate: 0.06, costPerTurn: 75,
     flavor: 'デザインへのこだわりが強すぎる。',
     personalEvents: ['e_spec_change_minor', 'e_new_tool'],
+    engineeringSkill: 55, engineeringSkillRange: [45, 65],
+    managementSkill: 30, managementSkillRange: [20, 40],
+    communicationSkill: 45, communicationSkillRange: [35, 55],
     turnsOnTask: 0, condition: 100, analysisCount: 0,
   },
   {
@@ -30,6 +36,9 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     productivity: 8, actualOutputRange: [5, 13], bugRate: 0.25, costPerTurn: 30,
     flavor: '積極的だが経験が足りない。育てれば伸びる。',
     personalEvents: ['e_flu', 'e_new_tool'],
+    engineeringSkill: 25, engineeringSkillRange: [15, 35],
+    managementSkill: 18, managementSkillRange: [10, 25],
+    communicationSkill: 53, communicationSkillRange: [40, 65],
     turnsOnTask: 0, condition: 100, analysisCount: 0,
   },
   {
@@ -40,6 +49,9 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     productivity: 6, actualOutputRange: [4, 10], bugRate: 0.30, costPerTurn: 28,
     flavor: '前職は飲食業。でも熱意はある。',
     personalEvents: ['e_flu', 'e_meeting_hell'],
+    engineeringSkill: 18, engineeringSkillRange: [10, 25],
+    managementSkill: 13, managementSkillRange: [5, 20],
+    communicationSkill: 40, communicationSkillRange: [30, 50],
     turnsOnTask: 0, condition: 100, analysisCount: 0,
   },
   {
@@ -50,6 +62,9 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     productivity: 15, actualOutputRange: [13, 18], bugRate: 0.04, costPerTurn: 100,
     flavor: 'マネジメントもできる稀有な存在。',
     personalEvents: ['e_code_review_find', 'e_overtime'],
+    engineeringSkill: 50, engineeringSkillRange: [40, 60],
+    managementSkill: 70, managementSkillRange: [60, 80],
+    communicationSkill: 70, communicationSkillRange: [60, 80],
     turnsOnTask: 0, condition: 100, analysisCount: 0,
   },
   {
@@ -60,6 +75,9 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     productivity: 20, actualOutputRange: [17, 24], bugRate: 0.04, costPerTurn: 90,
     flavor: 'インフラ以外には興味がない。本当に。',
     personalEvents: ['e_new_tool', 'e_tech_debt'],
+    engineeringSkill: 70, engineeringSkillRange: [60, 80],
+    managementSkill: 20, managementSkillRange: [10, 30],
+    communicationSkill: 25, communicationSkillRange: [15, 35],
     turnsOnTask: 0, condition: 100, analysisCount: 0,
   },
   {
@@ -70,6 +88,9 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     productivity: 12, actualOutputRange: [10, 15], bugRate: 0.01, costPerTurn: 70,
     flavor: 'バグを見つけるのが生きがい。',
     personalEvents: ['e_code_review_find', 'e_client_happy'],
+    engineeringSkill: 55, engineeringSkillRange: [45, 65],
+    managementSkill: 45, managementSkillRange: [35, 55],
+    communicationSkill: 65, communicationSkillRange: [55, 75],
     turnsOnTask: 0, condition: 100, analysisCount: 0,
   },
   {
@@ -80,6 +101,9 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     productivity: 28, actualOutputRange: [24, 34], bugRate: 0.03, costPerTurn: 150,
     flavor: '高いが確実。専門知識は本物。',
     personalEvents: ['e_overtime', 'e_spec_change_minor'],
+    engineeringSkill: 80, engineeringSkillRange: [70, 90],
+    managementSkill: 50, managementSkillRange: [40, 60],
+    communicationSkill: 55, communicationSkillRange: [45, 65],
     turnsOnTask: 0, condition: 100, analysisCount: 0,
   },
   {
@@ -90,6 +114,9 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     productivity: 14, actualOutputRange: [11, 18], bugRate: 0.05, costPerTurn: 65,
     flavor: 'ピクセルパーフェクトにこだわる職人。',
     personalEvents: ['e_spec_change_minor', 'e_client_happy'],
+    engineeringSkill: 50, engineeringSkillRange: [40, 60],
+    managementSkill: 30, managementSkillRange: [20, 40],
+    communicationSkill: 60, communicationSkillRange: [50, 70],
     turnsOnTask: 0, condition: 100, analysisCount: 0,
   },
   {
@@ -100,6 +127,9 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     productivity: 16, actualOutputRange: [13, 20], bugRate: 0.08, costPerTurn: 110,
     flavor: '器用貧乏と言われるが本人は気にしていない。',
     personalEvents: ['e_flu', 'e_tech_debt'],
+    engineeringSkill: 50, engineeringSkillRange: [40, 60],
+    managementSkill: 35, managementSkillRange: [25, 45],
+    communicationSkill: 45, communicationSkillRange: [35, 55],
     turnsOnTask: 0, condition: 100, analysisCount: 0,
   },
   {
@@ -110,6 +140,9 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     productivity: 40, actualOutputRange: [36, 46], bugRate: 0.01, costPerTurn: 250,
     flavor: 'GitHubのスター数が笑えない数字。来てくれるだけで奇跡。',
     personalEvents: ['e_code_review_find', 'e_client_happy', 'e_god_engineer'],
+    engineeringSkill: 93, engineeringSkillRange: [85, 100],
+    managementSkill: 75, managementSkillRange: [65, 85],
+    communicationSkill: 75, communicationSkillRange: [65, 85],
     turnsOnTask: 0, condition: 100, analysisCount: 0,
   },
   // ── 追加エンジニア（大規模チーム向け） ──────────────────────
@@ -121,6 +154,9 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     productivity: 22, actualOutputRange: [19, 26], bugRate: 0.04, costPerTurn: 95,
     flavor: 'データパイプラインを愛している。',
     personalEvents: ['e_tech_debt', 'e_new_tool'],
+    engineeringSkill: 65, engineeringSkillRange: [55, 75],
+    managementSkill: 40, managementSkillRange: [30, 50],
+    communicationSkill: 45, communicationSkillRange: [35, 55],
     turnsOnTask: 0, condition: 100, analysisCount: 0,
   },
   {
@@ -131,6 +167,9 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     productivity: 18, actualOutputRange: [15, 22], bugRate: 0.02, costPerTurn: 105,
     flavor: '脆弱性を見つけることで眠れる夜がある。',
     personalEvents: ['e_code_review_find', 'e_meeting_hell'],
+    engineeringSkill: 70, engineeringSkillRange: [60, 80],
+    managementSkill: 45, managementSkillRange: [35, 55],
+    communicationSkill: 50, communicationSkillRange: [40, 60],
     turnsOnTask: 0, condition: 100, analysisCount: 0,
   },
   {
@@ -141,6 +180,9 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     productivity: 12, actualOutputRange: [10, 15], bugRate: 0.03, costPerTurn: 120,
     flavor: 'チームの潤滑油。本人の生産性より他者の生産性を上げる。',
     personalEvents: ['e_overtime', 'e_client_happy'],
+    engineeringSkill: 40, engineeringSkillRange: [30, 50],
+    managementSkill: 80, managementSkillRange: [70, 90],
+    communicationSkill: 80, communicationSkillRange: [70, 90],
     turnsOnTask: 0, condition: 100, analysisCount: 0,
   },
   {
@@ -151,6 +193,9 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     productivity: 16, actualOutputRange: [13, 20], bugRate: 0.04, costPerTurn: 115,
     flavor: 'UXは哲学だと信じている。',
     personalEvents: ['e_spec_change_minor', 'e_client_happy'],
+    engineeringSkill: 55, engineeringSkillRange: [45, 65],
+    managementSkill: 45, managementSkillRange: [35, 55],
+    communicationSkill: 65, communicationSkillRange: [55, 75],
     turnsOnTask: 0, condition: 100, analysisCount: 0,
   },
   {
@@ -161,6 +206,9 @@ export const PERSONNEL_CARDS: PersonnelCard[] = [
     productivity: 20, actualOutputRange: [17, 24], bugRate: 0.06, costPerTurn: 100,
     flavor: 'iOS/Android両方できる。本人は当然だと思っている。',
     personalEvents: ['e_new_tool', 'e_flu'],
+    engineeringSkill: 65, engineeringSkillRange: [55, 75],
+    managementSkill: 30, managementSkillRange: [20, 40],
+    communicationSkill: 50, communicationSkillRange: [40, 60],
     turnsOnTask: 0, condition: 100, analysisCount: 0,
   },
 ]

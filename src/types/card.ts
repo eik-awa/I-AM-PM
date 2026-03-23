@@ -24,6 +24,13 @@ export interface PersonnelCard {
   costPerTurn: number       // 万円/ターン
   flavor: string
   personalEvents: string[]  // このメンバーが引き起こす可能性のあるイベントID
+  // 3スキルステータス（ローグライク：ゲームごとにレンジ内でランダム変化）
+  engineeringSkill: number       // エンジニアスキル 0-100（技術力・生産性倍率に影響）
+  managementSkill: number        // マネジメントスキル 0-100（上流工程タスクの効率に影響）
+  communicationSkill: number     // コミュニケーションスキル 0-100（低いと認識齟齬バグが増加）
+  engineeringSkillRange: [number, number]
+  managementSkillRange: [number, number]
+  communicationSkillRange: [number, number]
   // 実行時状態
   assignedTaskId?: string
   turnsOnTask: number       // 同一タスク継続ターン数

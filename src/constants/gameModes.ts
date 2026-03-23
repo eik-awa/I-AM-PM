@@ -31,7 +31,7 @@ export const GAME_MODES: GameModeConfig[] = [
     maxProjects: 1,
     teamSizeMin: 2,
     isUnlocked: () => true,
-    missionIds: ['complete_game', 'high_quality', 'speed_runner'],
+    missionIds: ['complete_game', 'quality_guardian', 'budget_saver'],
     unlocksCharacters: ['p_kimura'],
   },
   {
@@ -42,7 +42,7 @@ export const GAME_MODES: GameModeConfig[] = [
     maxProjects: 1,
     teamSizeMin: 3,
     isUnlocked: (skills: string[]) => skills.includes('code_review'),
-    missionIds: ['complete_game', 'bug_free', 'quality_guardian'],
+    missionIds: ['complete_game', 'quality_guardian', 'bug_free'],
     unlocksCharacters: ['p_takahashi'],
   },
   {
@@ -54,7 +54,7 @@ export const GAME_MODES: GameModeConfig[] = [
     teamSizeMin: 4,
     isUnlocked: (skills: string[]) =>
       skills.includes('code_review') && skills.includes('risk_identification'),
-    missionIds: ['complete_game', 'budget_master', 'full_team'],
+    missionIds: ['complete_game', 'high_quality', 'speed_runner'],
     unlocksCharacters: ['p_matsumoto'],
   },
   {
@@ -68,7 +68,7 @@ export const GAME_MODES: GameModeConfig[] = [
       ['task_management', 'code_review', 'one_on_one', 'risk_identification'].every(s =>
         skills.includes(s)
       ),
-    missionIds: ['complete_game', 'productive_week', 'budget_master'],
+    missionIds: ['complete_game', 'budget_master', 'full_team'],
     unlocksCharacters: ['p_fl_fujiwara'],
   },
   {
@@ -82,7 +82,7 @@ export const GAME_MODES: GameModeConfig[] = [
       ['resource_optimization', 'cicd', 'contingency', 'team_building'].every(s =>
         skills.includes(s)
       ),
-    missionIds: ['complete_game', 'speed_runner', 'bug_free'],
+    missionIds: ['complete_game', 'speed_runner', 'bug_free', 'high_quality'],
     unlocksCharacters: ['p_god_engineer'],
   },
 ]

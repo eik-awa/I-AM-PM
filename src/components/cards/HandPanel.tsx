@@ -277,6 +277,21 @@ function ActivePersonnelChip({
   )
 }
 
+function SkillBar({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-pm-muted text-[9px] w-6 flex-shrink-0">{label}</span>
+      <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all ${color}`}
+          style={{ width: `${value}%` }}
+        />
+      </div>
+      <span className="text-white text-[9px] w-6 text-right flex-shrink-0">{value}</span>
+    </div>
+  )
+}
+
 function PersonnelDetail({
   card,
   isActive,
@@ -346,6 +361,14 @@ function PersonnelDetail({
           <p className="text-pm-muted text-[9px]">ミス率</p>
           <p className="text-pm-red font-bold text-xs">{Math.round(card.bugRate * 100)}%</p>
         </div>
+      </div>
+
+      {/* 3スキルステータスバー */}
+      <div className="bg-black/20 rounded p-2 mb-2 space-y-1.5">
+        <p className="text-pm-muted text-[9px] mb-1">── スキルステータス ──</p>
+        <SkillBar label="技術" value={card.engineeringSkill} color="bg-blue-400" />
+        <SkillBar label="管理" value={card.managementSkill} color="bg-green-400" />
+        <SkillBar label="伝達" value={card.communicationSkill} color="bg-yellow-400" />
       </div>
 
       {/* 稼働中の場合は継続ターン情報も表示 */}

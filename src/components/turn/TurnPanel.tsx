@@ -75,7 +75,9 @@ export function TurnPanel() {
       >
         {activeEvent
           ? 'イベントを解決してください'
-          : `Week ${turn.current} 終了 → Week ${Math.min(turn.current + 1, turn.max)} へ`}
+          : turn.current >= turn.max
+            ? `最終Week ${turn.current} 終了（ゲーム終了）`
+            : `Week ${turn.current} 終了 → Week ${turn.current + 1} へ`}
       </motion.button>
     </div>
   )

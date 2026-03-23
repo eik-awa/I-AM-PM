@@ -5,7 +5,7 @@ export const MISSION_POOL: MissionDef[] = [
     id: 'complete_game',
     name: 'プロジェクト完遂',
     description: 'プロジェクトをクリアせよ',
-    reward: 20,
+    reward: 30,
     conditionType: 'complete_game',
     displayTarget: 'クリア',
   },
