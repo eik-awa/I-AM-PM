@@ -39,10 +39,22 @@ const SKILL_CATEGORY_BADGE: Record<string, { icon: string; label: string; cls: s
 }
 
 export function HandPanel() {
-  const { hand, activePersonnel, deck, activeComboEffects, discoveredCombos } = useGameStore()
+  const { hand, activePersonnel, deck, activeComboEffects, discoveredCombos, setPendingAssign } = useGameStore()
   const [selectedCard, setSelectedCard] = useState<string | null>(null)
   const [selectedActiveId, setSelectedActiveId] = useState<string | null>(null)
   const [isExpanded, setIsExpanded] = useState(true)
+
+  function selectHandCard(cardId: string | null) {
+    setSelectedActiveId(null)
+    setSelectedCard(cardId)
+    setPendingAssign(cardId)
+  }
+
+  function selectActiveCard(personnelId: string | null) {
+    setSelectedCard(null)
+    setSelectedActiveId(personnelId)
+    setPendingAssign(personnelId)
+  }
 
   // 手札 or 稼働中から選択中のカードを取得
   const selectedHandCard = hand.find(c => c.id === selectedCard) as PersonnelCard | undefined
@@ -128,17 +140,14 @@ export function HandPanel() {
             {/* 稼働中の人員（作業中 + 待機中） */}
             {activePersonnel.length > 0 && (
               <div className="px-3 py-2 border-b border-white/5">
-                <p className="text-pm-muted text-[9px] mb-1.5">── 稼働中（タップで詳細 / ドラッグで再アサイン） ──</p>
+                <p className="text-pm-muted text-[9px] mb-1.5">── 稼働中（タップで選択 → WBSタスクをタップして再アサイン） ──</p>
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {activePersonnel.map(p => (
                     <ActivePersonnelChip
                       key={p.id}
                       personnel={p}
                       isSelected={selectedActiveId === p.id}
-                      onClick={() => {
-                        setSelectedCard(null)
-                        setSelectedActiveId(selectedActiveId === p.id ? null : p.id)
-                      }}
+                      onClick={() => selectActiveCard(selectedActiveId === p.id ? null : p.id)}
                     />
                   ))}
                 </div>
@@ -159,10 +168,7 @@ export function HandPanel() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.8 }}
-                  onClick={() => {
-                    setSelectedActiveId(null)
-                    setSelectedCard(card.id === selectedCard ? null : card.id)
-                  }}
+                  onClick={() => selectHandCard(card.id === selectedCard ? null : card.id)}
                   className={cn(
                     'flex-shrink-0 cursor-pointer',
                     selectedCard === card.id ? 'scale-105' : '',
@@ -402,10 +408,10 @@ function PersonnelDetail({
       <p className="text-pm-muted text-[11px] italic mb-1">{card.flavor}</p>
 
       {!isActive && (
-        <p className="text-pm-cyan text-[10px] mt-1">↑ WBSのタスクへドラッグしてアサイン</p>
+        <p className="text-pm-cyan text-[10px] mt-1">↑ WBSのタスクをタップしてアサイン</p>
       )}
       {isActive && !card.assignedTaskId && (
-        <p className="text-pm-yellow text-[10px] mt-1">タスクが完了 — 次のタスクへドラッグ</p>
+        <p className="text-pm-yellow text-[10px] mt-1">タスクが完了 — 次のタスクをタップして再アサイン</p>
       )}
     </motion.div>
   )

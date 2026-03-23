@@ -33,6 +33,9 @@ interface GameStore extends GameState {
   addLog: (msg: string, type: LogEntry['type']) => void
   unlockSkill: (skillId: string) => void
   getActiveSkillEffects: () => SkillEffect
+  // UI state
+  pendingAssignPersonnelId: string | null
+  setPendingAssign: (id: string | null) => void
 }
 
 // ── ヘルパー関数 ──────────────────────────────────────────
@@ -1030,6 +1033,10 @@ export const useGameStore = create<GameStore>()(
 
       dismissComboActivation: () => {
         set({ pendingComboActivation: null })
+      },
+
+      setPendingAssign: (id) => {
+        set({ pendingAssignPersonnelId: id })
       },
 
       goToTitle: () => {

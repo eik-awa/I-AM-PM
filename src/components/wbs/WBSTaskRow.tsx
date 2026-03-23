@@ -26,7 +26,7 @@ interface Props {
 }
 
 export function WBSTaskRow({ task }: Props) {
-  const { activePersonnel, assignPersonnel, unassignPersonnel } = useGameStore()
+  const { activePersonnel, assignPersonnel, unassignPersonnel, pendingAssignPersonnelId, setPendingAssign } = useGameStore()
   const [isDragOver, setIsDragOver] = useState(false)
 
   const assignedPersonnel = activePersonnel.filter(p => p.assignedTaskId === task.id)
@@ -34,6 +34,13 @@ export function WBSTaskRow({ task }: Props) {
   const hasFire = task.statusEffects.some(e => e.type === 'fire')
 
   const isDroppable = task.status === 'ready' || task.status === 'in_progress'
+  const isTapAssignable = isDroppable && !!pendingAssignPersonnelId
+
+  function handleTapAssign() {
+    if (!isTapAssignable) return
+    assignPersonnel(pendingAssignPersonnelId!, task.id)
+    setPendingAssign(null)
+  }
 
   function handleDragOver(e: React.DragEvent) {
     if (!isDroppable) return
@@ -60,11 +67,13 @@ export function WBSTaskRow({ task }: Props) {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      onClick={handleTapAssign}
       className={cn(
         'rounded-lg border transition-all',
         task.status === 'done' ? 'border-pm-green/20 bg-pm-green/5 opacity-70' :
         task.status === 'locked' ? 'border-white/5 bg-black/20 opacity-50' :
         isDragOver ? 'border-pm-cyan/60 bg-pm-cyan/10' :
+        isTapAssignable ? 'border-pm-cyan/50 bg-pm-cyan/5 cursor-pointer ring-1 ring-pm-cyan/30' :
         hasFire ? 'border-pm-red/40 bg-pm-red/5' :
         'border-white/8 bg-pm-card/50',
       )}
@@ -147,9 +156,12 @@ export function WBSTaskRow({ task }: Props) {
           </div>
         )}
 
-        {/* ドロップヒント */}
+        {/* ドロップ / タップヒント */}
         {isDragOver && (
           <p className="text-pm-cyan text-[10px] text-center mt-1">ここにドロップしてアサイン</p>
+        )}
+        {isTapAssignable && !isDragOver && (
+          <p className="text-pm-cyan text-[10px] text-center mt-1 animate-pulse">タップしてアサイン ✓</p>
         )}
       </div>
     </div>

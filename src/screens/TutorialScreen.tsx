@@ -31,8 +31,7 @@ const STEP = {
   FIRE_BOSS:       22,
   RESULT_SCREEN:   23,
   RESULT_BOSS:     24,
-  UNLOCK_SCREEN:   25,
-  FINAL:           26,
+  FINAL:           25,
 } as const
 
 type Step = typeof STEP[keyof typeof STEP]
@@ -41,46 +40,99 @@ type Step = typeof STEP[keyof typeof STEP]
 // サブコンポーネント
 // ──────────────────────────────────────
 
-/** 上司の吹き出し */
-function BossBubble({ text, key: _key }: { text: string; key?: string }) {
+/** Slackスタイルのメッセージ */
+function SlackMsg({
+  name,
+  emoji,
+  text,
+  time,
+  nameColor = 'text-pm-text',
+  avatarBg = 'bg-pm-surface',
+  fromBottom = false,
+}: {
+  name: string
+  emoji: string
+  text: string
+  time?: string
+  nameColor?: string
+  avatarBg?: string
+  fromBottom?: boolean
+}) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: -8 }}
+      initial={{ opacity: 0, y: fromBottom ? 6 : -6 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
+      exit={{ opacity: 0 }}
       transition={{ duration: 0.25 }}
-      className="mx-4 mb-3"
+      className="flex gap-2.5 px-4 py-1.5 hover:bg-white/[0.03] transition-colors"
     >
-      <div className="flex items-start gap-2">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-pm-accent border border-pm-cyan/40 flex items-center justify-center text-sm">
-          👔
+      <div className={`flex-shrink-0 w-8 h-8 rounded-lg ${avatarBg} flex items-center justify-center text-sm`}>
+        {emoji}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-2 mb-0.5">
+          <span className={`text-xs font-bold ${nameColor}`}>{name}</span>
+          {time && <span className="text-pm-muted text-[10px] opacity-60">{time}</span>}
         </div>
-        <div className="bg-pm-surface border border-pm-cyan/20 rounded-xl rounded-tl-none px-4 py-2 max-w-[85%]">
-          <p className="text-pm-text text-sm leading-relaxed">{text}</p>
-        </div>
+        <p className="text-pm-text text-sm leading-relaxed">{text}</p>
       </div>
     </motion.div>
   )
 }
 
-/** プレイヤーの吹き出し */
-function PlayerBubble({ text }: { text: string }) {
+/** SlackのDMヘッダー */
+function SlackDMHeader() {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25 }}
-      className="mx-4 mb-3"
-    >
-      <div className="flex items-start justify-end gap-2">
-        <div className="bg-pm-card border border-white/10 rounded-xl rounded-tr-none px-4 py-2 max-w-[85%]">
-          <p className="text-pm-muted text-sm leading-relaxed">{text}</p>
-        </div>
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-pm-blue/30 border border-white/20 flex items-center justify-center text-sm">
-          👤
+    <div className="flex-shrink-0 px-4 py-3 border-b border-white/10 bg-black/20 flex items-center gap-3">
+      <div className="w-9 h-9 rounded-lg bg-pm-blue/30 border border-pm-cyan/20 flex items-center justify-center text-base">
+        👔
+      </div>
+      <div>
+        <p className="text-pm-text font-bold text-sm">田村部長</p>
+        <div className="flex items-center gap-1.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-pm-green" />
+          <p className="text-pm-muted text-xs">オンライン</p>
         </div>
       </div>
-    </motion.div>
+    </div>
+  )
+}
+
+/** Slackの日付区切り */
+function SlackDateDivider() {
+  return (
+    <div className="flex items-center gap-3 px-4 py-3">
+      <div className="flex-1 h-px bg-white/10" />
+      <span className="text-pm-muted text-xs border border-white/10 rounded-full px-2.5 py-0.5 opacity-60">今日</span>
+      <div className="flex-1 h-px bg-white/10" />
+    </div>
+  )
+}
+
+/** 上司のSlackメッセージ */
+function BossBubble({ text, key: _key }: { text: string; key?: string }) {
+  return (
+    <SlackMsg
+      name="田村部長"
+      emoji="👔"
+      text={text}
+      nameColor="text-pm-cyan"
+      avatarBg="bg-pm-blue/30 border border-pm-cyan/20"
+    />
+  )
+}
+
+/** プレイヤーのSlackメッセージ */
+function PlayerBubble({ text }: { text: string }) {
+  return (
+    <SlackMsg
+      name="あなた"
+      emoji="🧑"
+      text={text}
+      nameColor="text-pm-yellow"
+      avatarBg="bg-pm-accent/50"
+      fromBottom={true}
+    />
   )
 }
 
@@ -241,7 +293,6 @@ export function TutorialScreen() {
   const [screenProgress, setScreenProgress] = useState(0)
   const [hasFire, setHasFire] = useState(false)
   const [fireChoice, setFireChoice] = useState<'A' | 'B' | null>(null)
-  const [unlockIdx, setUnlockIdx] = useState(0)
 
   const next = useCallback(() => setStep(s => (s + 1) as Step), [])
 
@@ -267,14 +318,6 @@ export function TutorialScreen() {
     }
     return () => clearTimeout(t)
   }, [step, next])
-
-  // アンロック演出（順番に表示）
-  useEffect(() => {
-    if (step === STEP.UNLOCK_SCREEN && unlockIdx < 3) {
-      const t = setTimeout(() => setUnlockIdx(i => i + 1), 600)
-      return () => clearTimeout(t)
-    }
-  }, [step, unlockIdx])
 
   // ──────────────────────────────────
   // レンダー
@@ -1154,91 +1197,14 @@ export function TutorialScreen() {
                   onClick={next}
                   className="w-full py-3 bg-pm-cyan/10 border border-pm-cyan/40 rounded-xl text-pm-cyan text-sm font-bold active:scale-95 transition-transform"
                 >
-                  アンロック確認 →
+                  さあ、本番だ →
                 </motion.button>
               )}
             </div>
           </motion.div>
         )}
 
-        {/* ===== 25: アンロック演出 ===== */}
-        {step === STEP.UNLOCK_SCREEN && (
-          <motion.div
-            key="step5-unlock"
-            className="absolute inset-0 flex flex-col bg-pm-bg"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <div className="flex-shrink-0 px-4 pt-4 pb-2 border-b border-white/5">
-              <p className="text-pm-green text-xs font-bold tracking-widest text-center">UNLOCKED</p>
-            </div>
-
-            <div className="flex-1 px-4 py-6 flex flex-col gap-4 justify-center">
-              <AnimatePresence>
-                {unlockIdx >= 1 && (
-                  <motion.div
-                    key="u1"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="flex items-center gap-3 p-3 bg-pm-green/10 border border-pm-green/30 rounded-xl"
-                  >
-                    <span className="text-2xl">🃏</span>
-                    <div>
-                      <p className="text-pm-green text-xs">新カード解禁</p>
-                      <p className="text-pm-text text-sm font-bold">フリーランスカード</p>
-                    </div>
-                  </motion.div>
-                )}
-                {unlockIdx >= 2 && (
-                  <motion.div
-                    key="u2"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="flex items-center gap-3 p-3 bg-pm-cyan/10 border border-pm-cyan/30 rounded-xl"
-                  >
-                    <span className="text-2xl">📋</span>
-                    <div>
-                      <p className="text-pm-cyan text-xs">新プロジェクト解禁</p>
-                      <p className="text-pm-text text-sm font-bold">中規模案件</p>
-                    </div>
-                  </motion.div>
-                )}
-                {unlockIdx >= 3 && (
-                  <motion.div
-                    key="u3"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="flex items-center gap-3 p-3 bg-pm-yellow/10 border border-pm-yellow/30 rounded-xl"
-                  >
-                    <span className="text-2xl">⭐</span>
-                    <div>
-                      <p className="text-pm-yellow text-xs">新スキル習得</p>
-                      <p className="text-pm-text text-sm font-bold">レビュー強化</p>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {unlockIdx >= 3 && (
-              <div className="flex-shrink-0 p-4">
-                <motion.button
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                  onClick={next}
-                  className="w-full py-4 bg-pm-cyan/15 border border-pm-cyan/50 rounded-xl text-pm-cyan font-bold active:scale-95 transition-transform"
-                >
-                  さあ、本番だ →
-                </motion.button>
-              </div>
-            )}
-          </motion.div>
-        )}
-
-        {/* ===== 26: エンド ===== */}
+        {/* ===== 25: エンド ===== */}
         {step === STEP.FINAL && (
           <motion.div
             key="final"
