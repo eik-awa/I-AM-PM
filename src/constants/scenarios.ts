@@ -465,7 +465,7 @@ export const SCENARIOS: ProjectScenario[] = [
     difficulty: 'normal',
     phases: SMALL_PROJECT_PHASES,
     totalTurns: 15,
-    budget: 1500,
+    budget: 2500,
     qualityMin: 50,
     modeId: 'standard',
     requiredSkills: [],
