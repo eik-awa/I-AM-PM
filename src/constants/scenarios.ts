@@ -464,7 +464,7 @@ export const SCENARIOS: ProjectScenario[] = [
     description: '3ヶ月の小規模開発。標準的な構成。',
     difficulty: 'normal',
     phases: SMALL_PROJECT_PHASES,
-    totalTurns: 15,
+    totalTurns: 17,
     budget: 2500,
     qualityMin: 50,
     modeId: 'standard',

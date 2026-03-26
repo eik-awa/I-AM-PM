@@ -11,7 +11,7 @@ const RANK_THRESHOLDS = [
 ]
 
 export function ResultScreen() {
-  const { status, projects, turn, goToTitle, log, missions, pmPoints, skillPoints } = useGameStore()
+  const { status, projects, turn, goToTitle, log, missions, pmPoints, skillPoints, bossHints } = useGameStore()
   const won = status === 'won'
 
   // 全プロジェクトの平均QCDでスコア計算
@@ -192,6 +192,27 @@ export function ResultScreen() {
           {!won && '「それが現実というものだ。次の案件で取り返せ」'}
         </p>
       </motion.div>
+
+      {/* 攻略ヒント */}
+      {bossHints.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.65 }}
+          className="flex-shrink-0 mx-6 mb-6 p-4 bg-pm-surface rounded-xl border border-pm-yellow/20"
+        >
+          <p className="text-pm-yellow text-xs mb-3">── 攻略ヒント ──</p>
+          <div className="space-y-4">
+            {bossHints.map(hint => (
+              <div key={hint.id}>
+                <p className="text-pm-muted text-xs mb-1">{hint.condition}</p>
+                <p className="text-white text-sm mb-1">{hint.message}</p>
+                <p className="text-pm-cyan text-xs">{hint.advice}</p>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* ボタン */}
       <div className="flex-shrink-0 px-6 pb-12">

@@ -208,6 +208,30 @@ function generateBossHints(
     ? projects.reduce((s, p) => s + p.qcd.quality, 0) / projects.length
     : 0
 
+  // スキルミスマッチ検出: QA・インフラタスクが残っているか完了が遅い
+  const allTasks = projects.flatMap(p => p.phases.flatMap(ph => ph.tasks))
+  const hasQaTask = allTasks.some(t => t.requiredSkill === 'qa')
+  const hasInfraTask = allTasks.some(t => t.requiredSkill === 'infra')
+
+  if (result === 'lost' && (hasQaTask || hasInfraTask)) {
+    const skillNames = [hasQaTask && 'QA（結合テスト）', hasInfraTask && 'インフラ（リリース）'].filter(Boolean).join('・')
+    hints.push({
+      id: 'hint_skill_gap',
+      condition: `${skillNames}タスクで専門スキルが不足`,
+      message: `スターターチームにはQA・インフラ担当がいないため、${skillNames}タスクの進捗が大幅に遅くなります。`,
+      advice: 'スキルツリーでPMポイントを貯め、高橋QA担当・松本インフラ担当をアンロックしましょう。それまでは3人全員で担当タスクに集中投入するのが有効です。',
+    })
+  }
+
+  if (result === 'lost') {
+    hints.push({
+      id: 'hint_parallel',
+      condition: 'タイムオーバー',
+      message: '依存関係のないタスクは同時並行で進めることがタイム短縮の鍵です。',
+      advice: '設計完了後はAPI・UI・DBを別々の担当に割り振り、同時進行させましょう。連続して同じタスクを担当させると継続ボーナス（最大1.4倍）が発動します。',
+    })
+  }
+
   if (overtimeCount >= 2) {
     hints.push({
       id: 'hint_overtime',
@@ -222,7 +246,7 @@ function generateBossHints(
       id: 'hint_spec_change',
       condition: `仕様変更が${specChangeCount}回発生した`,
       message: '仕様変更が多発しています。要件定義フェーズでのすり合わせが不十分かもしれません。',
-      advice: 'プロジェクト初期にステークホルダーとのアライメントを徹底することで変更を減らせます。',
+      advice: '仕様変更イベントは「交渉する」を選ぶと進捗への影響を最小化できます（品質が少し下がりますが）。',
     })
   }
 
@@ -231,7 +255,7 @@ function generateBossHints(
       id: 'hint_bugs',
       condition: `蓄積バグが${totalBugs}個`,
       message: 'バグが多く蓄積しています。品質への影響が出ています。',
-      advice: 'コードレビューをスキルツリーで習得し、QAエンジニアを早めにアサインしましょう。',
+      advice: 'コードレビューをスキルツリーで習得し、QAエンジニアを早めにアサインしましょう。バグが溜まると品質が毎ターン自動的に減少します。',
     })
   }
 
@@ -240,7 +264,7 @@ function generateBossHints(
       id: 'hint_quality',
       condition: `品質が${Math.round(avgQuality)}で終了`,
       message: '品質管理が追いつきませんでした。',
-      advice: '各タスクのqualityImpactが高いものを優先して完了させ、バグを溜めないよう注意しましょう。',
+      advice: '品質+20のテストタスクを早めに通しましょう。また炎上イベントは「全員で対処」を選ぶと品質が回復します。',
     })
   }
 
@@ -258,7 +282,7 @@ function generateBossHints(
       id: 'hint_congrats',
       condition: 'プロジェクト完遂',
       message: 'お見事！プロジェクトを成功させました。',
-      advice: '次はより難しいモードに挑戦して、PMとしての経験値を積みましょう。',
+      advice: '次はより難しいモードに挑戦して、PMとしての経験値を積みましょう。スキルポイントでチームを強化するのもお忘れなく。',
     })
   }
 
