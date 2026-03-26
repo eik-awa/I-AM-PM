@@ -306,6 +306,7 @@ export const useGameStore = create<GameStore>()(
   persist(
     (set, get) => ({
       ...initialState,
+      pendingAssignPersonnelId: null,
 
       getActiveSkillEffects: () => mergeSkillEffects(get().unlockedSkills),
 

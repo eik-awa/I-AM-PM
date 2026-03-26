@@ -47,6 +47,15 @@ const MODE_ACCENT_BG: Record<string, string> = {
   expert: 'bg-pm-yellow',
 }
 
+const MODE_STATS: Record<string, { turns: number; budget: string; deck: number; tasks: string; minQuality: number }> = {
+  beginner:      { turns: 15, budget: '2000万', deck: 3, tasks: '3',    minQuality: 15 },
+  standard:      { turns: 15, budget: '2500万', deck: 4, tasks: '6',    minQuality: 50 },
+  crisis:        { turns: 10, budget: '900万',  deck: 4, tasks: '5',    minQuality: 40 },
+  large_scale:   { turns: 18, budget: '3000万', deck: 5, tasks: '15',   minQuality: 60 },
+  multi_project: { turns: 12, budget: '900+1000万', deck: 7, tasks: '5+6', minQuality: 50 },
+  expert:        { turns: 18, budget: '3000万', deck: 8, tasks: '15',   minQuality: 60 },
+}
+
 const CARD_FLIP_VARIANTS = {
   enter: (dir: number) => ({
     rotateY: dir > 0 ? 70 : -70,
@@ -132,6 +141,22 @@ function ModeCardContent({
       </div>
 
       <p className="text-pm-text text-sm leading-relaxed mb-3">{mode.description}</p>
+
+      {MODE_STATS[mode.id] && (
+        <div className="grid grid-cols-4 gap-1.5 mb-3">
+          {[
+            { label: 'ターン', value: `${MODE_STATS[mode.id].turns}` },
+            { label: '予算', value: MODE_STATS[mode.id].budget },
+            { label: '手札', value: `${MODE_STATS[mode.id].deck}枚` },
+            { label: 'タスク', value: MODE_STATS[mode.id].tasks },
+          ].map(({ label, value }) => (
+            <div key={label} className="bg-white/5 rounded-lg px-1.5 py-1.5 text-center border border-white/8">
+              <p className="text-pm-muted text-[9px] leading-none mb-0.5">{label}</p>
+              <p className={`text-[11px] font-bold leading-none ${accent}`}>{value}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {mode.missionIds && mode.missionIds.length > 0 && (
         <div className="mt-3 border-t border-white/10 pt-2.5">

@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../../store/gameStore'
+import { useDragStore } from '../../store/dragStore'
 import type { PersonnelCard } from '../../types/card'
 import { COMBO_RECIPES } from '../../constants/combos'
 import { cn } from '../../utils/cn'
@@ -168,13 +169,16 @@ export function HandPanel() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.8 }}
-                  onClick={() => selectHandCard(card.id === selectedCard ? null : card.id)}
                   className={cn(
-                    'flex-shrink-0 cursor-pointer',
+                    'flex-shrink-0',
                     selectedCard === card.id ? 'scale-105' : '',
                   )}
                 >
-                  <PersonnelMiniCard card={card as PersonnelCard} isSelected={selectedCard === card.id} />
+                  <PersonnelMiniCard
+                    card={card as PersonnelCard}
+                    isSelected={selectedCard === card.id}
+                    onSelect={() => selectHandCard(card.id === selectedCard ? null : card.id)}
+                  />
                 </motion.div>
               ))}
             </div>
@@ -185,19 +189,58 @@ export function HandPanel() {
   )
 }
 
-function PersonnelMiniCard({ card, isSelected }: { card: PersonnelCard; isSelected: boolean }) {
-  function handleDragStart(e: React.DragEvent) {
-    e.dataTransfer.setData('personnelId', card.id)
+function PersonnelMiniCard({ card, isSelected, onSelect }: { card: PersonnelCard; isSelected: boolean; onSelect: () => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const startPos = useRef<{ x: number; y: number } | null>(null)
+  const dragging = useRef(false)
+  const { startDrag, moveDrag, endDrag } = useDragStore()
+  const { assignPersonnel, setPendingAssign } = useGameStore()
+
+  function handlePointerDown(e: React.PointerEvent) {
+    startPos.current = { x: e.clientX, y: e.clientY }
+    dragging.current = false
+    ref.current?.setPointerCapture(e.pointerId)
+  }
+
+  function handlePointerMove(e: React.PointerEvent) {
+    if (!startPos.current) return
+    const dx = e.clientX - startPos.current.x
+    const dy = e.clientY - startPos.current.y
+    if (!dragging.current && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+      dragging.current = true
+      startDrag(card.id, card.name, e.clientX, e.clientY)
+      setPendingAssign(card.id)
+    }
+    if (dragging.current) moveDrag(e.clientX, e.clientY)
+  }
+
+  function handlePointerUp(e: React.PointerEvent) {
+    if (dragging.current) {
+      const el = document.elementFromPoint(e.clientX, e.clientY)
+      const taskRow = el?.closest('[data-task-id]') as HTMLElement | null
+      if (taskRow?.dataset.taskDroppable === 'true') {
+        assignPersonnel(card.id, taskRow.dataset.taskId!)
+        setPendingAssign(null)
+      }
+      endDrag()
+    } else {
+      onSelect()
+    }
+    startPos.current = null
+    dragging.current = false
   }
 
   const catBadge = card.color ? SKILL_CATEGORY_BADGE[card.color] : null
 
   return (
     <div
-      draggable
-      onDragStart={handleDragStart}
+      ref={ref}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      style={{ touchAction: 'none' }}
       className={cn(
-        'w-24 p-2 rounded-lg border transition-all card-shadow cursor-grab active:cursor-grabbing select-none',
+        'w-24 p-2 rounded-lg border transition-all card-shadow cursor-pointer select-none',
         PERSONNEL_TYPE_BG[card.personnelType],
         PERSONNEL_TYPE_COLOR[card.personnelType],
         isSelected ? 'ring-1 ring-pm-cyan' : '',
@@ -237,8 +280,44 @@ function ActivePersonnelChip({
   isSelected: boolean
   onClick: () => void
 }) {
-  function handleDragStart(e: React.DragEvent) {
-    e.dataTransfer.setData('personnelId', personnel.id)
+  const ref = useRef<HTMLDivElement>(null)
+  const startPos = useRef<{ x: number; y: number } | null>(null)
+  const dragging = useRef(false)
+  const { startDrag, moveDrag, endDrag } = useDragStore()
+  const { assignPersonnel, setPendingAssign } = useGameStore()
+
+  function handlePointerDown(e: React.PointerEvent) {
+    startPos.current = { x: e.clientX, y: e.clientY }
+    dragging.current = false
+    ref.current?.setPointerCapture(e.pointerId)
+  }
+
+  function handlePointerMove(e: React.PointerEvent) {
+    if (!startPos.current) return
+    const dx = e.clientX - startPos.current.x
+    const dy = e.clientY - startPos.current.y
+    if (!dragging.current && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+      dragging.current = true
+      startDrag(personnel.id, personnel.name, e.clientX, e.clientY)
+      setPendingAssign(personnel.id)
+    }
+    if (dragging.current) moveDrag(e.clientX, e.clientY)
+  }
+
+  function handlePointerUp(e: React.PointerEvent) {
+    if (dragging.current) {
+      const el = document.elementFromPoint(e.clientX, e.clientY)
+      const taskRow = el?.closest('[data-task-id]') as HTMLElement | null
+      if (taskRow?.dataset.taskDroppable === 'true') {
+        assignPersonnel(personnel.id, taskRow.dataset.taskId!)
+        setPendingAssign(null)
+      }
+      endDrag()
+    } else {
+      onClick()
+    }
+    startPos.current = null
+    dragging.current = false
   }
 
   const isIdle = !personnel.assignedTaskId
@@ -246,9 +325,11 @@ function ActivePersonnelChip({
 
   return (
     <div
-      draggable
-      onDragStart={handleDragStart}
-      onClick={onClick}
+      ref={ref}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      style={{ touchAction: 'none' }}
       className={cn(
         'flex-shrink-0 flex flex-col gap-0.5 px-2 py-1.5 rounded-lg border cursor-pointer select-none transition-all',
         PERSONNEL_TYPE_BG[personnel.personnelType],

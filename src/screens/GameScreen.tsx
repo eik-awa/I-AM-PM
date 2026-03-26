@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
+import { useDragStore } from '../store/dragStore'
 import { StatusBar } from '../components/layout/StatusBar'
 import { WBSBoard } from '../components/wbs/WBSBoard'
 import { ProgressTree } from '../components/wbs/ProgressTree'
@@ -52,8 +53,26 @@ export function GameScreen() {
   const shouldShowBossHint = (status === 'won' || status === 'lost') &&
     bossHints.length > 0 && showBossHint
 
+  const drag = useDragStore()
+
   return (
     <div className="h-full flex flex-col overflow-hidden relative">
+      {/* ドラッグゴースト */}
+      {drag.personnelId && (
+        <div
+          style={{
+            position: 'fixed',
+            left: drag.x,
+            top: drag.y,
+            transform: 'translate(-50%, -130%)',
+            pointerEvents: 'none',
+            zIndex: 9999,
+          }}
+          className="bg-pm-surface border border-pm-cyan/60 text-white text-xs px-3 py-1.5 rounded-lg shadow-xl whitespace-nowrap"
+        >
+          👤 {drag.label}
+        </div>
+      )}
       {/* ステータスバー */}
       <StatusBar />
 
