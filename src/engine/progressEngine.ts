@@ -136,6 +136,35 @@ export function calculateProgress(
   return { taskId: task.id, progressGained: progress, bugsAdded, skillPointsEarned: 0 }
 }
 
+// 疲弊度係数
+function fatigueMult(fatigue: number): number {
+  if (fatigue >= 90) return 0.6
+  if (fatigue >= 70) return 0.8
+  return 1.0
+}
+
+// アサイン時の予想出力（ランダム要素なし・表示用）
+export function estimateOutputForPersonnel(
+  personnel: PersonnelCard,
+  task: TaskCard,
+  currentPersonnelOnTask: PersonnelCard[], // このタスクに既にアサイン済みの人員（自分を除く）
+): number {
+  const base = personnel.productivity
+  const skill = skillMultiplier(personnel, task)
+  const continuity = continuityBonus(personnel.turnsOnTask)
+  const condition = conditionMultiplier(personnel.condition)
+  const engMult = engineeringSkillMultiplier(personnel.engineeringSkill)
+  const mgtMult = managementMultiplier(personnel.managementSkill, task)
+  const fatigueMultiplier = fatigueMult(personnel.fatigue ?? 0)
+  const output = base * skill * continuity * condition * engMult * mgtMult * fatigueMultiplier
+
+  const teamCount = currentPersonnelOnTask.length + 1
+  const team = teamMultiplier(teamCount)
+  const diff = difficultyMultiplier(task.difficulty)
+
+  return Math.round(output * team * diff)
+}
+
 // スコア計算（複数プロジェクト対応: 平均QCDを使用）
 export function calculateFinalScore(
   quality: number,

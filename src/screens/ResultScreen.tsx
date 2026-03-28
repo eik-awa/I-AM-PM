@@ -11,7 +11,7 @@ const RANK_THRESHOLDS = [
 ]
 
 export function ResultScreen() {
-  const { status, projects, turn, goToTitle, log, missions, pmPoints, skillPoints, bossHints } = useGameStore()
+  const { status, projects, turn, goToTitle, log, missions, pmPoints, skillPoints, bossHints, activePersonnel } = useGameStore()
   const won = status === 'won'
 
   // 全プロジェクトの平均QCDでスコア計算
@@ -35,6 +35,17 @@ export function ResultScreen() {
   const rankEntry = RANK_THRESHOLDS.find(r => score >= r.min) ?? RANK_THRESHOLDS[RANK_THRESHOLDS.length - 1]
 
   const lastLogs = log.slice(-5)
+
+  // スキル成長サマリー
+  const grownPersonnel = activePersonnel.filter(p => (p.skillGrowthLog?.length ?? 0) > 0)
+
+  // 失敗原因グループ
+  const failCauses = bossHints.filter(h => h.id.startsWith('hint_fail_cause'))
+  const buggyTaskHint = bossHints.find(h => h.id === 'hint_buggy_tasks')
+  const skillGrowthHint = bossHints.find(h => h.id === 'hint_skill_growth')
+  const otherHints = bossHints.filter(h =>
+    !h.id.startsWith('hint_fail_cause') && h.id !== 'hint_buggy_tasks' && h.id !== 'hint_skill_growth'
+  )
 
   return (
     <div className="h-full flex flex-col bg-pm-bg overflow-y-auto">
@@ -193,17 +204,83 @@ export function ResultScreen() {
         </p>
       </motion.div>
 
-      {/* 攻略ヒント */}
-      {bossHints.length > 0 && (
+      {/* 失敗分析（lost時のみ） */}
+      {!won && (failCauses.length > 0 || buggyTaskHint) && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.65 }}
+          className="flex-shrink-0 mx-6 mb-5 p-4 bg-pm-surface rounded-xl border border-pm-red/20"
+        >
+          <p className="text-pm-red text-xs mb-3">── 失敗分析 ──</p>
+          <div className="space-y-3">
+            {failCauses.map(hint => (
+              <div key={hint.id} className="bg-pm-red/5 rounded-lg p-2.5 border border-pm-red/15">
+                <p className="text-pm-red text-[11px] font-bold mb-1">{hint.condition}</p>
+                <p className="text-white text-xs mb-1">{hint.message}</p>
+                <p className="text-pm-cyan text-[11px]">💡 {hint.advice}</p>
+              </div>
+            ))}
+            {buggyTaskHint && (
+              <div className="bg-pm-red/5 rounded-lg p-2.5 border border-pm-red/15">
+                <p className="text-pm-red text-[11px] font-bold mb-1">{buggyTaskHint.condition}</p>
+                <p className="text-white text-xs mb-1">{buggyTaskHint.message}</p>
+                <p className="text-pm-cyan text-[11px]">💡 {buggyTaskHint.advice}</p>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+
+      {/* スキル成長サマリー */}
+      {grownPersonnel.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.68 }}
+          className="flex-shrink-0 mx-6 mb-5 p-4 bg-pm-surface rounded-xl border border-blue-400/20"
+        >
+          <p className="text-blue-400 text-xs mb-3">── スキル成長 ──</p>
+          <div className="space-y-2">
+            {grownPersonnel.map(p => {
+              const totalGrowth = p.skillGrowthLog!.reduce((s, g) => s + g.amount, 0)
+              const growthTimes = p.skillGrowthLog!.length
+              return (
+                <div key={p.id} className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-xs font-bold text-blue-300">
+                    {p.name[0]}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-white text-xs font-medium">{p.name}</p>
+                    <p className="text-pm-muted text-[10px]">{p.title}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-blue-400 text-xs font-bold">+{totalGrowth} EP</p>
+                    <p className="text-pm-muted text-[10px]">技術力 {p.engineeringSkill} / {growthTimes}回成長</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          {skillGrowthHint && (
+            <p className="text-pm-cyan text-[11px] mt-2 pt-2 border-t border-white/8">
+              💡 {skillGrowthHint.advice}
+            </p>
+          )}
+        </motion.div>
+      )}
+
+      {/* 攻略ヒント */}
+      {otherHints.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
           className="flex-shrink-0 mx-6 mb-6 p-4 bg-pm-surface rounded-xl border border-pm-yellow/20"
         >
           <p className="text-pm-yellow text-xs mb-3">── 攻略ヒント ──</p>
           <div className="space-y-4">
-            {bossHints.map(hint => (
+            {otherHints.map(hint => (
               <div key={hint.id}>
                 <p className="text-pm-muted text-xs mb-1">{hint.condition}</p>
                 <p className="text-white text-sm mb-1">{hint.message}</p>
@@ -219,7 +296,7 @@ export function ResultScreen() {
         <motion.button
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.7 }}
+          transition={{ delay: 0.8 }}
           onClick={goToTitle}
           className="w-full py-4 bg-pm-cyan text-pm-bg font-bold text-lg rounded-xl hover:bg-pm-cyan/80 active:scale-95 transition-all"
         >

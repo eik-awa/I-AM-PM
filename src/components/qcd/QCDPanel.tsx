@@ -88,6 +88,58 @@ export function QCDPanel() {
         </div>
       </div>
 
+      {/* 進捗診断 */}
+      {activeProject && activeProject.status === 'active' && (() => {
+        const pace = turn.current > 1 ? qcd.delivery / (turn.current - 1) : 0
+        const needed = pace > 0 ? Math.ceil((100 - qcd.delivery) / pace) : null
+        const overUnder = needed !== null ? turnsLeft - needed : null
+        const budgetPct = qcd.budget > 0 ? Math.round((qcd.cost / qcd.budget) * 100) : 0
+        const budgetTurnsLeft = weeklyBurn > 0 ? Math.floor(remainingBudget / weeklyBurn) : 99
+
+        return (
+          <div className="bg-pm-surface/60 rounded-xl border border-white/8 p-4">
+            <p className="text-pm-muted text-xs mb-3 tracking-wider">── 進捗診断 ──</p>
+            {/* トリコロールバー */}
+            <div className="mb-3">
+              <div className="flex justify-between text-[10px] text-pm-muted mb-1">
+                <span>消化率</span><span>品質</span><span>予算健全度</span>
+              </div>
+              <div className="flex h-2 rounded-full overflow-hidden gap-0.5">
+                <div className="rounded-full bg-pm-cyan" style={{ width: `${Math.round(qcd.delivery / 3)}%` }} />
+                <div className="rounded-full bg-pm-green" style={{ width: `${Math.round(Math.min(100, qcd.quality) / 3)}%` }} />
+                <div className="rounded-full bg-pm-yellow" style={{ width: `${Math.round(Math.max(0, 100 - budgetPct) / 3)}%` }} />
+              </div>
+              <div className="flex justify-between text-[10px] font-bold mt-0.5">
+                <span className="text-pm-cyan">{qcd.delivery}%</span>
+                <span className="text-pm-green">{Math.round(qcd.quality)}</span>
+                <span className="text-pm-yellow">{100 - budgetPct}%残</span>
+              </div>
+            </div>
+            {/* ペース診断 */}
+            <div className="space-y-1.5">
+              {needed !== null && overUnder !== null ? (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-pm-muted">完了見通し</span>
+                  <span className={overUnder >= 0 ? 'text-pm-green font-bold' : 'text-pm-red font-bold'}>
+                    {overUnder >= 0
+                      ? `あと約${needed}週（${overUnder}週の余裕）`
+                      : `あと約${needed}週（${Math.abs(overUnder)}週不足）`}
+                  </span>
+                </div>
+              ) : (
+                <div className="text-pm-muted text-xs">作業を開始するとペースを計算します</div>
+              )}
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-pm-muted">予算残分</span>
+                <span className={budgetTurnsLeft >= turnsLeft ? 'text-pm-green font-bold' : 'text-pm-red font-bold'}>
+                  {weeklyBurn > 0 ? `約${budgetTurnsLeft}週分` : '計算不可'}
+                </span>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* チーム状況 */}
       <div className="bg-pm-surface/60 rounded-xl border border-white/8 p-4">
         <p className="text-pm-muted text-xs mb-3 tracking-wider">── チーム状況 ──</p>

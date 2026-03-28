@@ -455,4 +455,60 @@ export const EVENT_CARDS: EventCard[] = [
       },
     ],
   },
+  {
+    id: 'e_scope_review',
+    type: 'event',
+    name: 'スコープ見直し要請',
+    description: '残り期間に対してタスクが多すぎる。PMとして今後の方針を決断せよ。',
+    severity: 'negative',
+    flavor: 'スコープ・コスト・品質は常にトレードオフだ。',
+    choices: [
+      {
+        id: 'skip_task',
+        label: 'スコープを削減する',
+        description: '最も進捗が低いタスクをスキップ。品質が少し下がるが期限は守れる。',
+        effects: [{ type: 'skip_task' }, { type: 'quality_delta', value: -8 }],
+      },
+      {
+        id: 'quality_sacrifice',
+        label: '品質を犠牲に全力前進',
+        description: '今週の進捗を大幅加速。ただし品質が大きく低下。',
+        effects: [{ type: 'quality_delta', value: -15 }, { type: 'progress_delta', value: 30 }],
+      },
+      {
+        id: 'maintain',
+        label: '現状維持（リスク承知）',
+        description: '変化なし。このまま突き進む。',
+        effects: [],
+      },
+    ],
+  },
+  {
+    id: 'e_budget_review',
+    type: 'event',
+    name: '予算アラート',
+    description: 'コストが予算の70%を超えた。このまま続けると予算超過の危機だ。',
+    severity: 'negative',
+    flavor: 'お金は有限だ。それを忘れないように。',
+    choices: [
+      {
+        id: 'reduce_personnel',
+        label: '人員を一名削減',
+        description: '最高出力メンバーを外してコストを抑える。',
+        effects: [{ type: 'remove_personnel' }],
+      },
+      {
+        id: 'request_budget',
+        label: '追加予算を申請',
+        description: '上層部から予算追加。ただし今後の評価が下がる（品質-5）。',
+        effects: [{ type: 'cost_delta', value: -300 }, { type: 'quality_delta', value: -5 }],
+      },
+      {
+        id: 'continue',
+        label: '現状のまま続ける',
+        description: '予算超過のリスクを承知で続行。わずかに品質が落ちる。',
+        effects: [{ type: 'quality_delta', value: -3 }],
+      },
+    ],
+  },
 ]

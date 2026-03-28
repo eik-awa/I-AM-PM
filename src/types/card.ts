@@ -37,6 +37,8 @@ export interface PersonnelCard {
   condition: number         // コンディション 0-100
   analysisCount: number     // 使用回数（5回で全解析済みに）
   previousTaskId?: string   // 前ターン担当タスクID（連鎖判定用）
+  fatigue?: number          // 疲弊度 0-100（高難易度のみ有効）
+  skillGrowthLog?: Array<{ turn: number; amount: number }> // スキル成長履歴
 }
 
 export type TaskStatus = 'locked' | 'ready' | 'in_progress' | 'done' | 'failed'
@@ -98,6 +100,7 @@ export type EffectType =
   | 'remove_personnel'     // 人員離脱
   | 'draw_card'
   | 'block_task'
+  | 'skip_task'            // 最低進捗タスクをスキップ（完了扱い）
 
 export interface GameEffect {
   type: EffectType

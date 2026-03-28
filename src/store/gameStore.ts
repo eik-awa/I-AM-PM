@@ -12,7 +12,7 @@ import { PERSONNEL_CARDS, EVENT_CARDS } from '../constants/cards'
 import { MISSION_POOL } from '../constants/missions'
 import { SKILL_TREE } from '../constants/skills'
 import { getScenariosForMode } from '../constants/scenarios'
-import { GAME_MODES } from '../constants/gameModes'
+import { GAME_MODES, DIFFICULTY_STARS } from '../constants/gameModes'
 import { COMBO_RECIPES } from '../constants/combos'
 import { calculateProgress, calculateFinalScore, mergeComboEffects } from '../engine/progressEngine'
 import { shuffle } from '../utils/random'
@@ -93,6 +93,8 @@ function randomizePersonnelSkills(p: PersonnelCard): PersonnelCard {
     engineeringSkill: Math.round(Math.random() * (eMax - eMin) + eMin),
     managementSkill: Math.round(Math.random() * (mMax - mMin) + mMin),
     communicationSkill: Math.round(Math.random() * (cMax - cMin) + cMin),
+    fatigue: 0,
+    skillGrowthLog: [],
   }
 }
 
@@ -197,6 +199,7 @@ function generateBossHints(
   eventFlags: EventFlag[],
   projects: ProjectInstance[],
   result: 'won' | 'lost',
+  activePersonnel: PersonnelCard[] = [],
 ): BossHint[] {
   const hints: BossHint[] = []
 
@@ -207,28 +210,71 @@ function generateBossHints(
   const avgQuality = projects.length > 0
     ? projects.reduce((s, p) => s + p.qcd.quality, 0) / projects.length
     : 0
+  const avgCostRatio = projects.length > 0
+    ? projects.reduce((s, p) => s + (p.qcd.budget > 0 ? p.qcd.cost / p.qcd.budget : 0), 0) / projects.length
+    : 0
 
-  // スキルミスマッチ検出: QA・インフラタスクが残っているか完了が遅い
   const allTasks = projects.flatMap(p => p.phases.flatMap(ph => ph.tasks))
+  const incompleteTasks = allTasks.filter(t => t.status !== 'done')
   const hasQaTask = allTasks.some(t => t.requiredSkill === 'qa')
   const hasInfraTask = allTasks.some(t => t.requiredSkill === 'infra')
 
+  // ── 失敗原因ランキング（lost時のみ）──
+  if (result === 'lost') {
+    type FailCause = { reason: string; detail: string; advice: string }
+    const causes: FailCause[] = []
+
+    if (avgQuality < 40) {
+      causes.push({
+        reason: `品質不足（${Math.round(avgQuality)}点）`,
+        detail: `品質が基準値を大きく下回りました。蓄積バグ${totalBugs}個が主因の可能性があります。`,
+        advice: 'バグ発生率の低いメンバーを優先アサインし、QAタスクを早めに通しましょう。',
+      })
+    }
+    if (avgCostRatio > 1.0) {
+      causes.push({
+        reason: `予算超過（${Math.round(avgCostRatio * 100)}%消費）`,
+        detail: '予算を使い切りました。待機コスト（手札の50%）が積み重なりやすいので注意。',
+        advice: '手札を絞り、稼働人員を集中アサインすることで週次コストを最適化しましょう。',
+      })
+    }
+    if (incompleteTasks.length > 0) {
+      causes.push({
+        reason: `タスク未完了（${incompleteTasks.length}件残）`,
+        detail: `残タスク: ${incompleteTasks.slice(0, 3).map(t => t.name).join('、')}${incompleteTasks.length > 3 ? '…' : ''}`,
+        advice: '依存関係のないタスクは並行作業が可能です。継続ボーナス（3ターンで1.4倍）を活かして集中突破しましょう。',
+      })
+    }
+
+    causes.forEach((c, i) => {
+      hints.push({
+        id: `hint_fail_cause_${i}`,
+        condition: `❌ 主な失敗原因: ${c.reason}`,
+        message: c.detail,
+        advice: c.advice,
+      })
+    })
+
+    // バグが多いタスク
+    const buggytasks = [...allTasks].sort((a, b) => b.bugs - a.bugs).filter(t => t.bugs > 0).slice(0, 2)
+    if (buggytasks.length > 0) {
+      hints.push({
+        id: 'hint_buggy_tasks',
+        condition: `🐛 バグが多かったタスク`,
+        message: buggytasks.map(t => `「${t.name}」${t.bugs}個`).join('  '),
+        advice: 'コミュニケーションスキルが低いメンバーはバグを生みやすいです。木村リーダーなどのレビュアーと組ませましょう。',
+      })
+    }
+  }
+
+  // ── 共通ヒント ──
   if (result === 'lost' && (hasQaTask || hasInfraTask)) {
     const skillNames = [hasQaTask && 'QA（結合テスト）', hasInfraTask && 'インフラ（リリース）'].filter(Boolean).join('・')
     hints.push({
       id: 'hint_skill_gap',
       condition: `${skillNames}タスクで専門スキルが不足`,
       message: `スターターチームにはQA・インフラ担当がいないため、${skillNames}タスクの進捗が大幅に遅くなります。`,
-      advice: 'スキルツリーでPMポイントを貯め、高橋QA担当・松本インフラ担当をアンロックしましょう。それまでは3人全員で担当タスクに集中投入するのが有効です。',
-    })
-  }
-
-  if (result === 'lost') {
-    hints.push({
-      id: 'hint_parallel',
-      condition: 'タイムオーバー',
-      message: '依存関係のないタスクは同時並行で進めることがタイム短縮の鍵です。',
-      advice: '設計完了後はAPI・UI・DBを別々の担当に割り振り、同時進行させましょう。連続して同じタスクを担当させると継続ボーナス（最大1.4倍）が発動します。',
+      advice: 'スキルツリーでPMポイントを貯め、高橋QA担当・松本インフラ担当をアンロックしましょう。',
     })
   }
 
@@ -277,7 +323,24 @@ function generateBossHints(
     })
   }
 
-  if (result === 'won' && hints.length === 0) {
+  // スキル成長サマリー
+  const grownPersonnel = activePersonnel.filter(p => (p.skillGrowthLog?.length ?? 0) > 0)
+  if (grownPersonnel.length > 0) {
+    const growthSummary = grownPersonnel
+      .map(p => {
+        const total = p.skillGrowthLog!.reduce((s, g) => s + g.amount, 0)
+        return `${p.name} +${total}EP（技術力${p.engineeringSkill}）`
+      })
+      .join('、')
+    hints.push({
+      id: 'hint_skill_growth',
+      condition: '📈 今回のスキル成長',
+      message: growthSummary,
+      advice: '成長した人員は次のゲームでも高いスキルでスタートします。新人をタスクに積極投入して育てましょう。',
+    })
+  }
+
+  if (result === 'won' && hints.filter(h => !h.id.startsWith('hint_skill')).length === 0) {
     hints.push({
       id: 'hint_congrats',
       condition: 'プロジェクト完遂',
@@ -286,7 +349,7 @@ function generateBossHints(
     })
   }
 
-  return hints.slice(0, 4)
+  return hints.slice(0, 6)
 }
 
 // ── 初期状態 ─────────────────────────────────────────────
@@ -473,12 +536,14 @@ export const useGameStore = create<GameStore>()(
         if (state.turn.phase !== 'planning') return
 
         const skillEffects = mergeSkillEffects(state.unlockedSkills)
+        const isHighDifficulty = (DIFFICULTY_STARS[state.mode] ?? 2) >= 3
         const newLogs: LogEntry[] = []
         let totalCostThisTurn = 0
         let tasksCompletedThisTurn = 0
         let totalSkillPointsEarned = state.skillPoints
         const newEventFlags: EventFlag[] = [...state.eventFlags]
         const newGanttHistory: GanttEntry[] = [...state.ganttHistory]
+        const skillGrowthUpdates = new Map<string, number>() // personnelId -> 成長量
 
         const costMult = skillEffects.personnelCostMultiplier ?? 1.0
         for (const p of state.activePersonnel) {
@@ -558,6 +623,14 @@ export const useGameStore = create<GameStore>()(
           }
         }
 
+        // 疲弊補正済みの人員コピー（calculateProgressに渡す）
+        const fatigueAdjustedPersonnel = state.activePersonnel.map(p => {
+          if (!isHighDifficulty) return p
+          const fatigue = p.fatigue ?? 0
+          const mult = fatigue >= 90 ? 0.6 : fatigue >= 70 ? 0.8 : 1.0
+          return mult !== 1.0 ? { ...p, productivity: Math.round(p.productivity * mult) } : p
+        })
+
         // ── 各プロジェクトの進捗計算 ─────────────────────────
         const updatedProjects: ProjectInstance[] = state.projects.map(project => {
           if (project.status !== 'active') return project
@@ -572,7 +645,7 @@ export const useGameStore = create<GameStore>()(
             for (const task of phase.tasks) {
               if (task.status !== 'in_progress' && task.status !== 'ready') continue
 
-              const assigned = state.activePersonnel.filter(p => p.assignedTaskId === task.id)
+              const assigned = fatigueAdjustedPersonnel.filter(p => p.assignedTaskId === task.id)
               if (assigned.length === 0) continue
 
               task.status = 'in_progress'
@@ -610,6 +683,18 @@ export const useGameStore = create<GameStore>()(
                   message: `✅ [${project.name}] ${task.name} 完了！+${spReward}SP`,
                   type: 'success',
                 })
+                // スキル成長（タスク担当者のengineeringSkillが向上）
+                const originalAssigned = state.activePersonnel.filter(p => p.assignedTaskId === task.id)
+                for (const p of originalAssigned) {
+                  const growthBase = Math.floor(Math.random() * 3) + 1
+                  const growthAmount = p.personnelType === 'newcomer' ? growthBase * 2 : growthBase
+                  skillGrowthUpdates.set(p.id, (skillGrowthUpdates.get(p.id) ?? 0) + growthAmount)
+                  newLogs.push({
+                    turn: state.turn.current,
+                    message: `📈 ${p.name} がスキルアップ！（+${growthAmount} EP）`,
+                    type: 'success',
+                  })
+                }
               }
             }
           }
@@ -681,19 +766,45 @@ export const useGameStore = create<GameStore>()(
         )
         const conditionRecovery = 5 + (skillEffects.conditionRecoveryBonus ?? 0)
         const updatedPersonnel = state.activePersonnel.map(p => {
+          // スキル成長を適用
+          const growthAmount = skillGrowthUpdates.get(p.id) ?? 0
+          const newEngineeringSkill = growthAmount > 0
+            ? Math.min(100, p.engineeringSkill + growthAmount)
+            : p.engineeringSkill
+          const newSkillGrowthLog = growthAmount > 0
+            ? [...(p.skillGrowthLog ?? []), { turn: state.turn.current, amount: growthAmount }]
+            : p.skillGrowthLog
+
+          // 疲弊度更新（高難易度のみ）
+          let newFatigue = p.fatigue ?? 0
+          if (isHighDifficulty) {
+            if (p.assignedTaskId && !allCompletedTaskIds.has(p.assignedTaskId)) {
+              newFatigue = Math.min(100, newFatigue + 12) // アサイン中は疲弊増加
+            } else {
+              newFatigue = Math.max(0, newFatigue - 15) // 未アサイン・タスク完了で回復
+            }
+          }
+
+          const base = {
+            engineeringSkill: newEngineeringSkill,
+            skillGrowthLog: newSkillGrowthLog,
+            fatigue: newFatigue,
+          }
+
           // タスクが完了していたらアサインをクリアして待機状態に（activePersonnelには残る）
           if (p.assignedTaskId && allCompletedTaskIds.has(p.assignedTaskId)) {
             return {
               ...p,
+              ...base,
               assignedTaskId: undefined,
               turnsOnTask: 0,
               condition: Math.min(100, p.condition + conditionRecovery),
             }
           }
           if (p.assignedTaskId) {
-            return { ...p, turnsOnTask: p.turnsOnTask + 1 }
+            return { ...p, ...base, turnsOnTask: p.turnsOnTask + 1 }
           }
-          return { ...p, condition: Math.min(100, p.condition + conditionRecovery) }
+          return { ...p, ...base, condition: Math.min(100, p.condition + conditionRecovery) }
         })
 
         // ── ミッション統計更新 ─────────────────────────────────
@@ -737,7 +848,7 @@ export const useGameStore = create<GameStore>()(
           const avgCost = updatedProjects.reduce((s, p) => s + p.qcd.cost, 0) / updatedProjects.length
           const score = calculateFinalScore(avgQuality, avgCost, avgBudget, state.turn.current, state.turn.max)
 
-          const bossHints = generateBossHints(newEventFlags, updatedProjects, finalResult)
+          const bossHints = generateBossHints(newEventFlags, updatedProjects, finalResult, updatedPersonnel)
 
           if (allProjectsWon) {
             const completedMissions = evaluateMissionsOnWin(missions, {
@@ -807,7 +918,7 @@ export const useGameStore = create<GameStore>()(
         }
 
         if (nextTurn > state.turn.max) {
-          const bossHints = generateBossHints(newEventFlags, updatedProjects, 'lost')
+          const bossHints = generateBossHints(newEventFlags, updatedProjects, 'lost', updatedPersonnel)
           set({
             status: 'lost',
             projects: updatedProjects,
@@ -858,6 +969,23 @@ export const useGameStore = create<GameStore>()(
         const comboEventMult = mergedComboEffect.eventProbMultiplier ?? 1.0
         const eventProb = Math.max(0, (0.25 + (nextTurn / state.turn.max) * 0.2 - eventReduction) * comboEventMult)
 
+        // 状況判断イベント（特定条件で強制発生・各1回のみ）
+        const activeProj = updatedProjects.find(p => p.id === state.activeProjectId) ?? updatedProjects[0]
+        if (activeProj && activeProj.status === 'active') {
+          const remainingFraction = (state.turn.max - nextTurn) / state.turn.max
+          const budgetUsageFraction = activeProj.qcd.budget > 0 ? activeProj.qcd.cost / activeProj.qcd.budget : 0
+          const alreadyScopeReview = newEventFlags.some(f => f.eventId === 'e_scope_review')
+          const alreadyBudgetReview = newEventFlags.some(f => f.eventId === 'e_budget_review')
+
+          if (!alreadyScopeReview && remainingFraction < 0.35 && activeProj.qcd.delivery < 50) {
+            const ev = EVENT_CARDS.find(e => e.id === 'e_scope_review')
+            if (ev) pendingEvents.push(ev)
+          } else if (!alreadyBudgetReview && budgetUsageFraction > 0.7) {
+            const ev = EVENT_CARDS.find(e => e.id === 'e_budget_review')
+            if (ev) pendingEvents.push(ev)
+          }
+        }
+
         // blitz炎上強制発生
         if (shouldTriggerBlitzFire) {
           const fireEvent = EVENT_CARDS.find(e => e.id === 'e_fire')
@@ -867,7 +995,7 @@ export const useGameStore = create<GameStore>()(
             message: '🔥 神速チームの代償…炎上発生！',
             type: 'danger',
           })
-        } else if (Math.random() < eventProb) {
+        } else if (pendingEvents.length === 0 && Math.random() < eventProb) {
           // 木村コンボ: nextEventPreviewが設定されている場合、そのイベントを引く
           if (hasKimuraCombo && state.nextEventPreview) {
             const previewEvent = EVENT_CARDS.find(e => e.id === state.nextEventPreview)
@@ -1019,6 +1147,32 @@ export const useGameStore = create<GameStore>()(
                     turn: state.turn.current,
                     message: `${highest.name} が離脱した`,
                     type: 'danger',
+                  })
+                }
+                break
+              }
+              case 'skip_task': {
+                // 最も進捗率が低い in_progress / ready タスクをスキップ（done扱い）
+                let lowestTask: TaskCard | null = null
+                let lowestRate = Infinity
+                for (const ph of phases) {
+                  for (const task of ph.tasks) {
+                    if (task.status === 'in_progress' || task.status === 'ready') {
+                      const rate = task.effortDone / task.effortTotal
+                      if (rate < lowestRate) {
+                        lowestRate = rate
+                        lowestTask = task
+                      }
+                    }
+                  }
+                }
+                if (lowestTask) {
+                  lowestTask.status = 'done'
+                  lowestTask.effortDone = lowestTask.effortTotal
+                  newLogs.push({
+                    turn: state.turn.current,
+                    message: `📋 スコープ削減：「${lowestTask.name}」をスキップした`,
+                    type: 'warning',
                   })
                 }
                 break

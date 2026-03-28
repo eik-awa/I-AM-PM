@@ -4,6 +4,8 @@ import { useGameStore } from '../../store/gameStore'
 import { useDragStore } from '../../store/dragStore'
 import type { PersonnelCard } from '../../types/card'
 import { COMBO_RECIPES } from '../../constants/combos'
+import { DIFFICULTY_STARS } from '../../constants/gameModes'
+import { estimateOutputForPersonnel } from '../../engine/progressEngine'
 import { cn } from '../../utils/cn'
 
 const PERSONNEL_TYPE_COLOR: Record<string, string> = {
@@ -39,8 +41,14 @@ const SKILL_CATEGORY_BADGE: Record<string, { icon: string; label: string; cls: s
   blitz:  { icon: '⭐', label: '精鋭系',   cls: 'bg-red-500/20 text-red-300 border-red-500/30' },
 }
 
+function fatigueBadge(fatigue: number): { label: string; cls: string } | null {
+  if (fatigue >= 90) return { label: '限界', cls: 'bg-pm-red/20 text-pm-red border-pm-red/40' }
+  if (fatigue >= 70) return { label: '疲弊中', cls: 'bg-pm-yellow/20 text-pm-yellow border-pm-yellow/40' }
+  return null
+}
+
 export function HandPanel() {
-  const { hand, activePersonnel, deck, activeComboEffects, discoveredCombos, setPendingAssign } = useGameStore()
+  const { hand, activePersonnel, deck, activeComboEffects, discoveredCombos, setPendingAssign, mode } = useGameStore()
   const [selectedCard, setSelectedCard] = useState<string | null>(null)
   const [selectedActiveId, setSelectedActiveId] = useState<string | null>(null)
   const [isExpanded, setIsExpanded] = useState(true)
@@ -69,6 +77,7 @@ export function HandPanel() {
     .map(e => COMBO_RECIPES.find(r => r.id === e.comboId))
     .filter(Boolean)
 
+  const isHighDifficulty = (DIFFICULTY_STARS[mode] ?? 2) >= 3
   const idlePersonnel = activePersonnel.filter(p => !p.assignedTaskId)
   const workingPersonnel = activePersonnel.filter(p => p.assignedTaskId)
 
@@ -133,6 +142,7 @@ export function HandPanel() {
                 <PersonnelDetail
                   card={detailCard}
                   isActive={isActiveCard}
+                  isHighDifficulty={isHighDifficulty}
                   onClose={() => { setSelectedCard(null); setSelectedActiveId(null) }}
                 />
               )}
@@ -149,6 +159,7 @@ export function HandPanel() {
                       personnel={p}
                       isSelected={selectedActiveId === p.id}
                       onClick={() => selectActiveCard(selectedActiveId === p.id ? null : p.id)}
+                      isHighDifficulty={isHighDifficulty}
                     />
                   ))}
                 </div>
@@ -178,6 +189,7 @@ export function HandPanel() {
                     card={card as PersonnelCard}
                     isSelected={selectedCard === card.id}
                     onSelect={() => selectHandCard(card.id === selectedCard ? null : card.id)}
+                    isHighDifficulty={isHighDifficulty}
                   />
                 </motion.div>
               ))}
@@ -189,7 +201,7 @@ export function HandPanel() {
   )
 }
 
-function PersonnelMiniCard({ card, isSelected, onSelect }: { card: PersonnelCard; isSelected: boolean; onSelect: () => void }) {
+function PersonnelMiniCard({ card, isSelected, onSelect, isHighDifficulty }: { card: PersonnelCard; isSelected: boolean; onSelect: () => void; isHighDifficulty?: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
   const startPos = useRef<{ x: number; y: number } | null>(null)
   const dragging = useRef(false)
@@ -231,6 +243,8 @@ function PersonnelMiniCard({ card, isSelected, onSelect }: { card: PersonnelCard
   }
 
   const catBadge = card.color ? SKILL_CATEGORY_BADGE[card.color] : null
+  const fatigue = card.fatigue ?? 0
+  const fbadge = isHighDifficulty ? fatigueBadge(fatigue) : null
 
   return (
     <div
@@ -246,13 +260,18 @@ function PersonnelMiniCard({ card, isSelected, onSelect }: { card: PersonnelCard
         isSelected ? 'ring-1 ring-pm-cyan' : '',
       )}
     >
-      {/* スキルタグ + カテゴリ */}
+      {/* スキルタグ + 疲弊バッジ */}
       <div className="flex items-center gap-1 mb-1 flex-wrap">
         {card.skills.map(s => (
           <span key={s} className={cn('text-[9px] px-1 py-0 rounded font-bold', SKILL_COLOR[s])}>
             {SKILL_LABEL[s]}
           </span>
         ))}
+        {fbadge && (
+          <span className={cn('text-[8px] px-1 py-0 rounded border leading-4', fbadge.cls)}>
+            {fbadge.label}
+          </span>
+        )}
       </div>
       <p className="text-white text-[11px] font-bold leading-tight truncate">{card.name}</p>
       <p className="text-pm-muted text-[9px] truncate">{card.title}</p>
@@ -264,6 +283,17 @@ function PersonnelMiniCard({ card, isSelected, onSelect }: { card: PersonnelCard
           </span>
         )}
       </div>
+      {isHighDifficulty && (
+        <div className="mt-1 h-1 bg-black/40 rounded-full overflow-hidden">
+          <div
+            className={cn(
+              'h-full rounded-full',
+              fatigue >= 90 ? 'bg-pm-red' : fatigue >= 70 ? 'bg-pm-yellow' : 'bg-pm-green',
+            )}
+            style={{ width: `${fatigue}%` }}
+          />
+        </div>
+      )}
       {card.analysisCount >= 5 && (
         <span className="text-[8px] text-pm-green">解析済み ✓</span>
       )}
@@ -275,10 +305,12 @@ function ActivePersonnelChip({
   personnel,
   isSelected,
   onClick,
+  isHighDifficulty,
 }: {
   personnel: PersonnelCard
   isSelected: boolean
   onClick: () => void
+  isHighDifficulty?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const startPos = useRef<{ x: number; y: number } | null>(null)
@@ -322,6 +354,8 @@ function ActivePersonnelChip({
 
   const isIdle = !personnel.assignedTaskId
   const catBadge = personnel.color ? SKILL_CATEGORY_BADGE[personnel.color] : null
+  const fatigue = personnel.fatigue ?? 0
+  const fbadge = isHighDifficulty ? fatigueBadge(fatigue) : null
 
   return (
     <div
@@ -345,6 +379,11 @@ function ActivePersonnelChip({
             {catBadge.icon}
           </span>
         )}
+        {fbadge && (
+          <span className={cn('text-[8px] px-0.5 rounded border leading-4', fbadge.cls)}>
+            {fbadge.label}
+          </span>
+        )}
       </div>
       {/* スキル行 */}
       <div className="flex gap-0.5 flex-wrap">
@@ -360,6 +399,17 @@ function ActivePersonnelChip({
           {isIdle ? '待機中' : `${personnel.turnsOnTask}T`}
         </span>
       </div>
+      {isHighDifficulty && (
+        <div className="h-0.5 bg-black/40 rounded-full overflow-hidden">
+          <div
+            className={cn(
+              'h-full rounded-full',
+              fatigue >= 90 ? 'bg-pm-red' : fatigue >= 70 ? 'bg-pm-yellow' : 'bg-pm-green',
+            )}
+            style={{ width: `${fatigue}%` }}
+          />
+        </div>
+      )}
     </div>
   )
 }
@@ -382,13 +432,28 @@ function SkillBar({ label, value, color }: { label: string; value: number; color
 function PersonnelDetail({
   card,
   isActive,
+  isHighDifficulty,
   onClose,
 }: {
   card: PersonnelCard
   isActive: boolean
+  isHighDifficulty?: boolean
   onClose: () => void
 }) {
+  const { projects, activeProjectId, activePersonnel } = useGameStore()
   const catBadge = card.color ? SKILL_CATEGORY_BADGE[card.color] : null
+  const fatigue = card.fatigue ?? 0
+
+  // 予想出力計算（アサイン済みタスクがある場合）
+  const activeProject = projects.find(p => p.id === activeProjectId)
+  let estimatedOutput: number | null = null
+  if (isActive && card.assignedTaskId && activeProject) {
+    const task = activeProject.phases.flatMap(ph => ph.tasks).find(t => t.id === card.assignedTaskId)
+    if (task) {
+      const othersOnTask = activePersonnel.filter(p => p.assignedTaskId === card.assignedTaskId && p.id !== card.id)
+      estimatedOutput = estimateOutputForPersonnel(card, task, othersOnTask)
+    }
+  }
 
   return (
     <motion.div
@@ -458,14 +523,52 @@ function PersonnelDetail({
         <SkillBar label="伝達" value={card.communicationSkill} color="bg-yellow-400" />
       </div>
 
-      {/* 稼働中の場合は継続ターン情報も表示 */}
+      {/* 稼働中の場合は継続ターン情報・疲弊・予想出力も表示 */}
       {isActive && (
-        <div className="bg-black/20 rounded p-2 mb-2 flex items-center justify-between">
-          <span className="text-pm-muted text-[10px]">同タスク継続</span>
-          <span className="text-pm-cyan text-xs font-bold">{card.turnsOnTask}ターン</span>
-          {card.turnsOnTask >= 1 && (
-            <span className="text-pm-green text-[9px]">+継続ボーナス</span>
+        <div className="bg-black/20 rounded p-2 mb-2 space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-pm-muted text-[10px]">同タスク継続</span>
+            <span className="text-pm-cyan text-xs font-bold">{card.turnsOnTask}ターン</span>
+            {card.turnsOnTask >= 1 && (
+              <span className="text-pm-green text-[9px]">+継続ボーナス</span>
+            )}
+          </div>
+          {estimatedOutput !== null && (
+            <div className="flex items-center justify-between">
+              <span className="text-pm-muted text-[10px]">今ターン予想出力</span>
+              <span className="text-pm-cyan text-xs font-bold">+{estimatedOutput} pt</span>
+            </div>
           )}
+        </div>
+      )}
+
+      {/* 疲弊度（高難易度モードのみ） */}
+      {isHighDifficulty && (
+        <div className="bg-black/20 rounded p-2 mb-2">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-pm-muted text-[10px]">疲弊度</span>
+            <span className={cn(
+              'text-xs font-bold',
+              fatigue >= 90 ? 'text-pm-red' : fatigue >= 70 ? 'text-pm-yellow' : 'text-pm-green',
+            )}>
+              {fatigue}%
+              {fatigue >= 90 && ' 🔴 限界'}
+              {fatigue >= 70 && fatigue < 90 && ' 🟡 疲弊中'}
+              {fatigue < 70 && ' 良好'}
+            </span>
+          </div>
+          <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
+            <div
+              className={cn(
+                'h-full rounded-full transition-all',
+                fatigue >= 90 ? 'bg-pm-red' : fatigue >= 70 ? 'bg-pm-yellow' : 'bg-pm-green',
+              )}
+              style={{ width: `${fatigue}%` }}
+            />
+          </div>
+          <p className="text-pm-muted text-[9px] mt-1">
+            {fatigue >= 90 ? '生産性60%に低下。休ませることを推奨。' : fatigue >= 70 ? '生産性80%に低下。休息を与えよう。' : '未アサインターンで回復します。'}
+          </p>
         </div>
       )}
 
