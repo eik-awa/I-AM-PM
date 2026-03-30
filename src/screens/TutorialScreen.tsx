@@ -285,6 +285,11 @@ export function TutorialScreen() {
   const { goToTitle } = useGameStore()
 
   const [step, setStep] = useState<Step>(STEP.INTRO_DARK)
+
+  function handleQuit() {
+    if (confirm('チュートリアルをやめてタイトルに戻りますか？')) goToTitle()
+  }
+
   const [engineerSelected, setEngineerSelected] = useState(false)
   const [newbieSelected, setNewbieSelected] = useState(false)
   const [engineerAssigned, setEngineerAssigned] = useState(false)
@@ -325,6 +330,15 @@ export function TutorialScreen() {
 
   return (
     <div className="h-full flex flex-col bg-pm-bg overflow-hidden relative">
+      {/* やめるボタン（全ステップで表示） */}
+      {step >= STEP.INTRO_BOSS1 && (
+        <button
+          onClick={handleQuit}
+          className="absolute top-3 right-3 z-50 text-pm-muted/60 text-xs px-2 py-1 rounded hover:text-pm-red transition-colors"
+        >
+          やめる
+        </button>
+      )}
       <AnimatePresence mode="wait">
 
         {/* ===== 0: 暗転 ===== */}
@@ -791,7 +805,7 @@ export function TutorialScreen() {
             <div className="flex-shrink-0 pt-3">
               <AnimatePresence mode="wait">
                 {step === STEP.EXEC_READY && (
-                  <BossBubble key="ex-b1" text="では「実行」ボタンを押してみろ" />
+                  <BossBubble key="ex-b1" text="では「ターン終了」ボタンを押してみろ" />
                 )}
                 {step === STEP.EXEC_RUNNING && (
                   <BossBubble key="ex-b2" text="進捗が動いているぞ…" />
@@ -879,20 +893,17 @@ export function TutorialScreen() {
               {step === STEP.EXEC_READY && (
                 <motion.button
                   initial={{ opacity: 0 }}
-                  animate={{
-                    opacity: 1,
-                    boxShadow: ['0 0 0px rgba(0,180,216,0)', '0 0 20px rgba(0,180,216,0.5)', '0 0 0px rgba(0,180,216,0)'],
-                  }}
-                  transition={{ boxShadow: { duration: 1.5, repeat: Infinity }, opacity: { delay: 0.3 } }}
+                  animate={{ opacity: 1 }}
+                  transition={{ opacity: { delay: 0.3 } }}
                   onClick={next}
-                  className="w-full py-4 bg-pm-cyan/15 border-2 border-pm-cyan/60 rounded-xl text-pm-cyan font-bold text-base active:scale-95 transition-transform"
+                  className="w-full py-3.5 rounded-xl font-bold text-base bg-gradient-to-r from-pm-cyan to-pm-blue text-white hover:opacity-90 glow-cyan active:scale-95 transition-transform"
                 >
-                  ▶ 実行
+                  Week 1 終了 → Week 2 へ
                 </motion.button>
               )}
               {step === STEP.EXEC_RUNNING && (
-                <div className="w-full py-4 text-center text-pm-muted text-sm">
-                  実行中…
+                <div className="w-full py-3.5 rounded-xl font-bold text-base text-center bg-pm-muted/30 text-pm-muted cursor-not-allowed">
+                  処理中…
                 </div>
               )}
               {step === STEP.EXEC_BOSS && (

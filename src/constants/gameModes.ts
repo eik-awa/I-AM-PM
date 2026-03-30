@@ -20,7 +20,7 @@ export const GAME_MODES: GameModeConfig[] = [
     maxProjects: 1,
     teamSizeMin: 1,
     isUnlocked: () => true,
-    missionIds: ['complete_game', 'quality_guardian', 'budget_saver'],
+    missionIds: ['complete_game', 'quality_guardian', 'budget_saver', 'productive_week'],
     unlocksCharacters: ['p_suzuki'],
   },
   {
@@ -31,7 +31,7 @@ export const GAME_MODES: GameModeConfig[] = [
     maxProjects: 1,
     teamSizeMin: 2,
     isUnlocked: () => true,
-    missionIds: ['complete_game', 'quality_guardian', 'budget_saver'],
+    missionIds: ['complete_game', 'quality_guardian', 'budget_saver', 'productive_week', 'full_team'],
     unlocksCharacters: ['p_kimura'],
   },
   {
